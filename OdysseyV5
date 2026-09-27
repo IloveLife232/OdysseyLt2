@@ -1,4 +1,3 @@
--- Odyssey UI Library v6 (Sidebar + Compact layouts, same API as v4/v5)
 local Odyssey = {}
 Odyssey.__index = Odyssey
 Odyssey.Flags = {}
@@ -12,8 +11,6 @@ local MarketplaceService=game:GetService("MarketplaceService")
 local LocalPlayer=Players.LocalPlayer
 local PlayerGui=LocalPlayer:WaitForChild("PlayerGui")
 
--- Real Material Icons - direct rbxassetid image URLs (credit: latte-soft & qweery via Nebula Softworks Luna)
--- No sprite sheet math needed, each icon is its own full image asset.
 local MaterialIcons = {
 	["home"]="http://www.roblox.com/asset/?id=6026568195";
 	["home_filled"]="rbxassetid://9080449299";
@@ -36,8 +33,8 @@ local MaterialIcons = {
 	["terrain"]="http://www.roblox.com/asset/?id=6034467794";
 	["landscape"]="http://www.roblox.com/asset/?id=6034407069";
 	["park"]="http://www.roblox.com/asset/?id=6034503369";
-	["forest"]="http://www.roblox.com/asset/?id=6034687957"; -- layers, closest forest-like available
-	["content_copy"]="http://www.roblox.com/asset/?id=6034687957"; -- layers icon, doubles as a duplicate/copy icon
+	["forest"]="http://www.roblox.com/asset/?id=6034687957";
+	["content_copy"]="http://www.roblox.com/asset/?id=6034687957";
 	["nature"]="http://www.roblox.com/asset/?id=6034323695";
 	["nature_people"]="http://www.roblox.com/asset/?id=6034323711";
 	["directions_walk"]="http://www.roblox.com/asset/?id=6034754448";
@@ -136,9 +133,9 @@ local MaterialIcons = {
 	["security"]="http://www.roblox.com/asset/?id=6034837802";
 	["verified_user"]="http://www.roblox.com/asset/?id=6031225819";
 	["admin_panel_settings"]="http://www.roblox.com/asset/?id=6022668961";
-	["key"]="http://www.roblox.com/asset/?id=6035202034"; -- vpn_key
+	["key"]="http://www.roblox.com/asset/?id=6035202034";
 	["policy"]="http://www.roblox.com/asset/?id=6035056512";
-	["build_engineering"]="http://www.roblox.com/asset/?id=6034281908"; -- engineering
+	["build_engineering"]="http://www.roblox.com/asset/?id=6034281908";
 	["science"]="http://www.roblox.com/asset/?id=6034230640";
 	["bug_report"]="http://www.roblox.com/asset/?id=6022852107";
 	["extension"]="http://www.roblox.com/asset/?id=6023565892";
@@ -197,16 +194,14 @@ local Themes={
 	["Citrus"]={c1=Color3.fromRGB(240,230,20),c2=Color3.fromRGB(240,90,60),c3=Color3.fromRGB(230,20,110),LT2BG=Color3.fromRGB(240,110,70)},
 	["Electric"]={c1=Color3.fromRGB(0,210,255),c2=Color3.fromRGB(58,92,255),c3=Color3.fromRGB(138,30,255),LT2BG=Color3.fromRGB(48,110,255)},
 }
--- Custom themes loaded from file get merged into this table at runtime
 
 local lt2ThemeEnabled=true
 local currentLT2BG=Color3.fromRGB(70,90,130)
 local currentThemeColors={c1=Color3.fromRGB(74,108,174),c2=Color3.fromRGB(90,90,140),c3=Color3.fromRGB(50,50,78)}
--- Tracks original colors so we can restore them when LT2 theme is turned off
+
 local OriginalColors={}
 local ProgressBarGradients={}
 
--- ===== V6 palette + helpers =====
 local C={
 	BG=Color3.fromRGB(16,18,30),
 	Side=Color3.fromRGB(11,13,22),
@@ -236,7 +231,7 @@ local function ThemeSeq()
 		ColorSequenceKeypoint.new(1,currentThemeColors.c3),
 	})
 end
--- Gradient that follows the active theme (registered with the theme updater)
+
 local function AccentGrad(obj,rot)
 	local g=Instance.new("UIGradient")
 	g.Color=ThemeSeq()
@@ -246,9 +241,7 @@ local function AccentGrad(obj,rot)
 	obj.AncestryChanged:Connect(function(_,p) if not p then ProgressBarGradients[g]=nil end end)
 	return g
 end
--- Shared layout-order counter so sections and their parent tab never collide
--- A UIGradient on a TextButton also tints its text (white text became invisible),
--- so gradient buttons get a gradient "Fill" frame behind a separate text label.
+
 local function GradientButton(btn,radius)
 	btn.BackgroundTransparency=1
 	local fill=Instance.new("Frame")
@@ -272,30 +265,27 @@ local function take(self)
 	return o
 end
 
--- Restyles Lumber Tycoon 2's own menus (shop, load/save, notices...) to match the Odyssey look:
--- dark panels tinted by the active theme, raised buttons with a thin outline, light text.
 local SKIP_GUIS={Chat=true,OdysseyUI=true,OdysseyTip=true,OdysseyNotif=true,OdysseyConfirm=true,OdysseyProgress=true,TargetGui=true,ESPGui=true,CrosshairGui=true}
--- Restyles Lumber Tycoon 2's own menus to match the Odyssey look (one ScreenGui at a time)
+
 local function StyleLT2Gui(v,themeColor)
 	if SKIP_GUIS[v.Name] then return end
 	local panelCol=C.BG:Lerp(themeColor,0.14)
 	local buttonCol=C.Hover:Lerp(themeColor,0.25)
 	local viewport=workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920,1080)
-	-- Read every size first, before changing anything. Reading a size right after changing
-	-- something makes Roblox redo the whole menu layout each time, which was the freeze.
+
 	local all=v:GetDescendants()
 	local overlay={}
 	for _,d in ipairs(all) do
 		if d:IsA("GuiObject") then
 			local ok,sz=pcall(function() return d.AbsoluteSize end)
-			-- Skip large full-screen overlays (fades, transitions) to avoid blacking out the game
+
 			if ok and sz.X>=viewport.X*0.85 and sz.Y>=viewport.Y*0.85 then overlay[d]=true end
 		end
 	end
 	local n=0
 	for _,d in ipairs(all) do
 		n=n+1
-		if n%250==0 then task.wait() end -- spread work over frames so there is no freeze
+		if n%250==0 then task.wait() end
 		pcall(function()
 				if overlay[d] or not d.Parent then return end
 				if d.Name=="DropShadow" then d:Destroy() return end
@@ -330,7 +320,7 @@ end
 local lt2Busy,lt2Again=false,false
 local function ApplyLT2Theme(themeColor)
 	if not lt2ThemeEnabled then return end
-	-- if a pass is already running (e.g. dragging a colour picker), just queue one more
+
 	if lt2Busy then lt2Again=true return end
 	lt2Busy=true
 	task.spawn(function()
@@ -361,7 +351,6 @@ local function RevertLT2Theme()
 	OriginalColors={}
 end
 
--- only style the menu that was just added, instead of rescanning every menu
 Players.LocalPlayer.PlayerGui.ChildAdded:Connect(function(v)
 	if SKIP_GUIS[v.Name] then return end
 	task.wait(0.1)
@@ -378,7 +367,7 @@ local function ApplyTheme(name)
 		ColorSequenceKeypoint.new(0.5,theme.c2),
 		ColorSequenceKeypoint.new(1,theme.c3),
 	})
-	-- Destroy and recreate the gradient fresh to force a real repaint (mutating .Color alone can fail to refresh)
+
 	if OdysseyMainRef then
 		pcall(function()
 			for _,old in ipairs(OdysseyMainRef:GetChildren()) do
@@ -402,7 +391,6 @@ local function New(class,props)
 	return o
 end
 
--- Tints whichever visual child an orb has (real icon image or fallback text glyph)
 local function SetOrbTint(orb, color)
 	for _,child in ipairs(orb:GetChildren()) do
 		if child:IsA("ImageLabel") then
@@ -518,15 +506,14 @@ Tab.__index=Tab
 local LEFT=Enum.TextXAlignment.Left
 local AUTO_Y=Enum.AutomaticSize.Y
 local function _row(parent,order) return New("Frame",{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=AUTO_Y,LayoutOrder=order or 0,Parent=parent}) end
--- Dividers are replaced by card spacing in V6; kept as invisible frames for compatibility
+
 local function _div(parent,order) return New("Frame",{Size=UDim2.new(1,0,0,0),BackgroundTransparency=1,Visible=false,LayoutOrder=order or 0,Parent=parent}) end
 local function _card(parent,order)
 	local f=New("Frame",{BackgroundColor3=C.Card,BackgroundTransparency=0.15,BorderSizePixel=0,Size=UDim2.new(1,0,0,0),AutomaticSize=AUTO_Y,LayoutOrder=order or 0,Parent=parent})
 	Corner(f,10); Stroke(f,C.CardStroke,1,0); Pad(f,9,12,9,12)
 	return f
 end
--- Where an element goes: inside the current section card (flat row + divider),
--- or as a standalone card if the tab has no section yet.
+
 local function _slot(self,asCard,weight,noDiv)
 	local root=self._root
 	local sec=root and root.secs[self._list]
@@ -581,7 +568,7 @@ local function tipOnly(opts) return (not opts.Description) and opts.Tooltip or n
 function Tab:CreateSection(name)
 	local root=self._root
 	if not root then return self end
-	-- masonry: put the new section card in the lighter column
+
 	local c=(root.w[2]<root.w[1]) and 2 or 1
 	root.secN=root.secN+1
 	root.colsFrame.Visible=true
@@ -599,7 +586,7 @@ function Tab:CreateSection(name)
 	root.secs[list]={n=0,col=c,card=card}
 	root.w[c]=root.w[c]+0.6
 	table.insert(root.cards,card)
-	-- everything created on this tab after this call lands in this section
+
 	self._list=list
 	regSection(self,card)
 	return setmetatable({_list=list,_order=0,_ctr=self._ctr,_root=root,_tabData=self._tabData,_win=self._win},Tab)
@@ -632,8 +619,6 @@ function Tab:CreateParagraph(opts)
 	return api
 end
 
--- opts.Style = "Primary" | "Danger" | nil (default)
--- opts.SameRow = true puts this button next to the button created just before it (half width each)
 local LastButton=setmetatable({},{__mode="k"})
 function Tab:CreateButton(opts)
 	opts=opts or {}
@@ -671,11 +656,10 @@ function Tab:CreateButton(opts)
 		local pip=New("Frame",{Size=UDim2.new(0,3,0,16),Position=UDim2.new(0,8,0.5,-8),BackgroundColor3=C.White,BorderSizePixel=0,Parent=btn})
 		Corner(pip,2); AccentGrad(pip,90)
 	end
-	-- The words always live in their own label and the button itself shows no text,
-	-- so text can never be drawn twice or run under the "i" icon.
+
 	local half=(btnSize.X.Scale<1)
 	local shown=opts.Name or "Button"
-	-- in a Start/Abort pair the red button just says "Abort" (its full name still works in search)
+
 	if half and style=="Danger" and shown:match("^Abort") then shown="Abort" end
 	local lbl=btn:FindFirstChild("Label")
 	if not lbl then
@@ -689,13 +673,13 @@ function Tab:CreateButton(opts)
 	local infoText=opts.Description or opts.Tooltip
 	if infoText then
 		AddTooltip(btn,infoText,true,btn,nil,true)
-		-- leave room on the right for the icon
+
 		if half then lbl.Size=UDim2.new(1,-38,1,0); lbl.Position=UDim2.new(0,10,0,0)
 		else lbl.Size=UDim2.new(1,-60,1,0); lbl.Position=UDim2.new(0,30,0,0) end
 	else
 		lbl.Size=UDim2.new(1,-20,1,0); lbl.Position=UDim2.new(0,10,0,0)
 	end
-	-- if this button joined a row, its partner is now half width too: give its text the same treatment
+
 	if prev and prev.btn then
 		local pl=prev.btn:FindFirstChild("Label")
 		if pl then
@@ -768,7 +752,7 @@ function Tab:CreateToggle(opts)
 	function api:GetValue() return enabled end
 	function api:Destroy() card:Destroy() end
 	if flag then Odyssey.Flags[flag]=enabled end
-	-- Fire once on creation if it starts enabled so the effect applies immediately
+
 	if enabled and cb then cb(enabled) end
 	return api
 end
@@ -883,7 +867,6 @@ function Tab:CreateInput(opts)
 	return api
 end
 
--- Builds a dark option list (optionally scrollable) used by both dropdown types
 local function _optionList(parent,order)
 	local body=New("Frame",{Size=UDim2.new(1,0,0,0),AutomaticSize=AUTO_Y,BackgroundColor3=C.Field,BorderSizePixel=0,Visible=false,LayoutOrder=order,Parent=parent})
 	Corner(body,8); Stroke(body,C.FieldStroke,1,0); Pad(body,5,5,5,5)
@@ -1215,12 +1198,10 @@ end
 local Window={}
 Window.__index=Window
 
--- ===== V6 navigation: sidebar buttons (desktop) + chips (compact/mobile) =====
 local DEFAULT_GROUPS={Home="Player",Character="Player",World="Player",
 	Property="Base",["Slot Importer"]="Base",Vehicle="Base",Builder="Base",
 	Wood="Misc",["Auto Buy"]="Misc",Dupe="Misc"}
--- Sidebar group header: small label + a thin line to the right. One per group,
--- always placed just above the group's first tab (works with any tab Order).
+
 function Window:_groupHeader(group,order)
 	self._groupHeaders=self._groupHeaders or {}
 	local h=self._groupHeaders[group]
@@ -1231,13 +1212,13 @@ function Window:_groupHeader(group,order)
 		h=New("Frame",{Name="Group_"..group,BackgroundTransparency=1,Size=UDim2.new(1,0,0,30),LayoutOrder=lo,Parent=self._navScroll})
 		local lbl=New("TextLabel",{Text=group:upper(),TextSize=12,TextColor3=C.Muted,Font=Enum.Font.BuilderSansBold,BackgroundTransparency=1,Size=UDim2.new(0,0,0,14),AutomaticSize=Enum.AutomaticSize.X,Position=UDim2.new(0,12,1,-18),Parent=h})
 		local line=New("Frame",{BackgroundColor3=C.CardStroke,BorderSizePixel=0,Size=UDim2.new(1,-20,0,1),Position=UDim2.new(0,0,1,-11),Parent=h})
-		-- line starts right after the label text
+
 		local function fit() line.Position=UDim2.new(0,lbl.TextBounds.X+20,1,-11); line.Size=UDim2.new(1,-(lbl.TextBounds.X+28),0,1) end
 		lbl:GetPropertyChangedSignal("TextBounds"):Connect(fit)
 		task.defer(fit)
 		self._groupHeaders[group]=h
 	end
-	-- the very first header doesn't need the extra space above it
+
 	local first,firstLO=nil,math.huge
 	for _,g in pairs(self._groupHeaders) do if g.LayoutOrder<firstLO then first,firstLO=g,g.LayoutOrder end end
 	for _,g in pairs(self._groupHeaders) do g.Size=UDim2.new(1,0,0,g==first and 22 or 34) end
@@ -1305,7 +1286,7 @@ function Window:_selectTab(td)
 	if self._titleLbl then self._titleLbl.Text=td.name end
 	if self._subLbl then self._subLbl.Text=td.desc or "" end
 	if self._contentScroll then self._contentScroll.CanvasPosition=Vector2.new(0,0) end
-	-- keep the active chip in view on compact layout
+
 	if td.chip and self._chipScroll and self._chipScroll.Visible then
 		pcall(function()
 			local x=td.chip.AbsolutePosition.X-self._chipScroll.AbsolutePosition.X+self._chipScroll.CanvasPosition.X
@@ -1403,7 +1384,6 @@ function Window:_buildHomeTab(gameName)
 	local LEFT=Enum.TextXAlignment.Left
 	local RIGHT=Enum.TextXAlignment.Right
 
-	-- ===== Stat tiles =====
 	local statsGrid=New("Frame",{Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y,BackgroundTransparency=1,LayoutOrder=1,Parent=list})
 	local statsGL=Instance.new("UIGridLayout")
 	statsGL.CellSize=UDim2.new(0.25,-6,0,62)
@@ -1434,7 +1414,6 @@ function Window:_buildHomeTab(gameName)
 	local pingTile=StatTile("Ping","...")
 	local fpsTile=StatTile("FPS","...")
 
-	-- ===== Two columns of cards =====
 	local cols=New("Frame",{Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y,BackgroundTransparency=1,LayoutOrder=2,Parent=list})
 	local colsL=Instance.new("UIListLayout")
 	colsL.FillDirection=Enum.FillDirection.Horizontal
@@ -1490,25 +1469,22 @@ function Window:_buildHomeTab(gameName)
 		return New("TextLabel",{Text=val,TextSize=13,TextColor3=C.Text,Font=Enum.Font.BuilderSansBold,BackgroundTransparency=1,Size=UDim2.new(0.45,0,1,0),Position=UDim2.new(0.55,0,0,0),TextXAlignment=RIGHT,TextTruncate=Enum.TextTruncate.AtEnd,Parent=f})
 	end
 
-	-- Character
 	local charCard,charL=HCard(colL,1,"Character",execName)
 	local dispV=InfoRow(charL,"Display name","...")
 	local userV=InfoRow(charL,"Username","...")
 	local ageV=InfoRow(charL,"Account age","...")
 	local idV=InfoRow(charL,"User ID","...",true)
 
-	-- Timers
 	local timCard,timL=HCard(colR,1,"Timers")
 	local ferryV=TimerRow(timL,"Ferry departs","...")
 	local slotTimerV=TimerRow(timL,"Slot cooldown","Ready")
 	local playersV=TimerRow(timL,"Server players",#Players:GetPlayers().." / "..Players.MaxPlayers)
 	local srvAgeV={}
 
-	-- What's new (filled by CreateUpdateLog)
 	local logCard,logL=HCard(colL,2,"What's new")
 	local logPill=New("TextLabel",{Text="v1.0",TextSize=12,TextColor3=Color3.fromRGB(123,140,255),Font=Enum.Font.BuilderSansBold,BackgroundTransparency=1,Size=UDim2.new(0,100,0,20),AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,0,0,0),TextXAlignment=Enum.TextXAlignment.Right,Parent=logL:FindFirstChildWhichIsA("Frame")})
 	logCard.Visible=false
-	-- fixed-height card with its own scroll area (height synced to the Community card below)
+
 	logCard.AutomaticSize=Enum.AutomaticSize.None
 	logCard.Size=UDim2.new(1,0,0,170)
 	logL.AutomaticSize=Enum.AutomaticSize.None
@@ -1518,11 +1494,10 @@ function Window:_buildHomeTab(gameName)
 	Pad(logScroll,2,8,4,0)
 	self._log={card=logCard,list=logScroll,pill=logPill}
 
-	-- Community (Discord + Donate, filled by CreateDiscordButton / CreateDonationPanel)
 	local comCard,comL=HCard(colR,2,"Community")
 	comCard.Visible=false
 	New("TextLabel",{Text="Join for updates, bug reports and support.",TextSize=13,TextColor3=C.Dim,Font=Enum.Font.BuilderSansMedium,BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y,TextWrapped=true,TextXAlignment=LEFT,LayoutOrder=1,Parent=comL})
-	-- buttons pinned to the bottom of the card
+
 	local btnRow=New("Frame",{BackgroundTransparency=1,Size=UDim2.new(1,0,0,34),AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,0,1,0),Parent=comCard})
 	local brl=HList(btnRow,8)
 	brl.VerticalAlignment=Enum.VerticalAlignment.Top
@@ -1544,11 +1519,9 @@ function Window:_buildHomeTab(gameName)
 	local donateArea=New("Frame",{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y,Visible=false,LayoutOrder=5,Parent=comL})
 	VList(donateArea,6)
 	self._community={list=comL,card=comCard,discordBtn=discordBtn,discordLbl=discordLbl,donateBtn=donateBtn,donateArea=donateArea}
-	-- Keep "What's new" ending level with the bottom of the Community card;
-	-- anything longer scrolls inside the card.
+
 	local mainRef=self._main
-	-- Line up the Home cards: Character = Timers height, What's new = Community height
-	-- (the update log scrolls inside its card).
+
 	local LOG_H=130
 	local function fix(card,h)
 		card.AutomaticSize=Enum.AutomaticSize.None
@@ -1570,7 +1543,7 @@ function Window:_buildHomeTab(gameName)
 		local top=math.max(natural(charL),natural(timL))
 		fix(charCard,top); fix(timCard,top)
 		local h=LOG_H
-		if comCard.Visible then h=math.max(natural(comL)+34+20,LOG_H) end -- text + gap + button row
+		if comCard.Visible then h=math.max(natural(comL)+34+20,LOG_H) end
 		fix(logCard,h)
 		if comCard.Visible then fix(comCard,h) end
 	end
@@ -1579,7 +1552,6 @@ function Window:_buildHomeTab(gameName)
 	end
 	task.defer(syncLog)
 
-	-- ===== Identity + blur (unchanged behaviour) =====
 	local realDisplayName,realUsername,realUserId="","",""
 	local blurIdentityEnabled=false
 	local blurLoopActive=false
@@ -1662,8 +1634,6 @@ function Window:_buildHomeTab(gameName)
 		RefreshIdentityDisplay()
 	end)
 
-	-- ===== Live values =====
-	-- Stats refresh twice a second (not every frame) and only when the text actually changes
 	local joinTime=tick()
 	local frames=0
 	RunService.RenderStepped:Connect(function() frames=frames+1 end)
@@ -1769,7 +1739,7 @@ function Window:Notify(nopts)
 	nopts=nopts or {}
 	local h=GetNotifHolder()
 	NotifCount=NotifCount+1
-	-- keep at most 5 on screen, drop the oldest
+
 	local frames={}
 	for _,ch in ipairs(h:GetChildren()) do if ch:IsA("Frame") then table.insert(frames,ch) end end
 	table.sort(frames,function(a,b) return a.LayoutOrder<b.LayoutOrder end)
@@ -1794,8 +1764,6 @@ function Window:Notify(nopts)
 	end)
 end
 
--- Double confirmation dialog. Requires "Yes" twice. "No" cancels at either step.
--- Window:Confirm({ Title=..., Warning1=..., Warning2=..., OnConfirm=function() end, OnCancel=function() end })
 function Window:Confirm(copts)
 	copts=copts or {}
 	local self_win=self
@@ -1836,9 +1804,6 @@ end
 
 function Window:SetKeybind(key) self._toggleKey=key end
 
--- Standalone floating progress bar (top-center). Follows the active theme.
--- local pb = Window:CreateProgressWidget({Name="Selling Wood...", CurrentValue=0})
--- pb:Set({Value=50}); pb:Set({Name="Selling Planks...", Value=0}); pb:Destroy()
 function Window:CreateProgressWidget(opts)
 	opts=opts or {}
 	local range=opts.Range or {0,100}
@@ -1878,7 +1843,6 @@ function Window:CreateProgressWidget(opts)
 	return api
 end
 
--- Fills the Home "What's new" card
 function Window:CreateUpdateLog(opts)
 	opts=opts or {}
 	local log=self._log
@@ -1912,7 +1876,6 @@ function Window:CreateUpdateLog(opts)
 	end
 end
 
--- Adds the Donate button + payment methods to the Home "Community" card
 function Window:CreateDonationPanel(opts)
 	opts=opts or {}
 	local com=self._community
@@ -1925,7 +1888,7 @@ function Window:CreateDonationPanel(opts)
 		local how=#names>0 and (" Tap Donate for "..table.concat(names,", ")..".") or " Tap Donate to see how."
 		New("TextLabel",{Text="Enjoying Odyssey? Donations help keep new features and fixes coming."..how,TextSize=13,TextColor3=C.Dim,Font=Enum.Font.BuilderSansMedium,BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y,TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left,LayoutOrder=2,Parent=com.list})
 	end
-	-- Dropdown panel that opens under the Donate button and floats over the UI
+
 	local btn=com.donateBtn
 	local main=self._main
 	local pop=New("Frame",{Name="OdysseyDonateDropdown",Size=UDim2.fromOffset(240,0),AutomaticSize=Enum.AutomaticSize.Y,BackgroundColor3=C.Card,BorderSizePixel=0,Visible=false,ZIndex=600,Parent=self._gui})
@@ -1957,7 +1920,7 @@ function Window:CreateDonationPanel(opts)
 		local vp=workspace.CurrentCamera.ViewportSize
 		local h=pop.AbsoluteSize.Y
 		local y=p.Y+s.Y+6
-		if y+h>vp.Y-50 then y=p.Y-h-6 end -- not enough room below: open upwards
+		if y+h>vp.Y-50 then y=p.Y-h-6 end
 		pop.Position=UDim2.fromOffset(p.X,y)
 	end
 	local function setOpen(v)
@@ -1978,12 +1941,11 @@ function Window:CreateDonationPanel(opts)
 		end
 		if not inside(pop) and not inside(btn) then setOpen(false) end
 	end)
-	-- hide when you switch away from Home
+
 	local homeTab=self._tabs and self._tabs[1]
 	if homeTab then homeTab.page:GetPropertyChangedSignal("Visible"):Connect(function() if not homeTab.page.Visible then setOpen(false) end end) end
 end
 
--- Shows the Discord button in the Home "Community" card
 function Window:CreateDiscordButton(opts)
 	opts=opts or {}
 	local com=self._community
@@ -2031,7 +1993,7 @@ function Odyssey:CreateWindow(opts)
 	})
 	OdysseyGradient.Rotation=120
 	OdysseyGradient.Parent=Main
-	-- Dark glass layer over the theme gradient: the theme still tints the window
+
 	local Shade=New("Frame",{Name="Shade",Size=UDim2.new(1,0,1,0),BackgroundColor3=C.BG,BackgroundTransparency=0.12,BorderSizePixel=0,Parent=Main})
 	Corner(Shade,16); Stroke(Shade,C.CardStroke,1,0)
 
@@ -2061,7 +2023,6 @@ function Odyssey:CreateWindow(opts)
 		return b
 	end
 
-	-- ===== Sidebar =====
 	local Side=New("Frame",{Name="Sidebar",Size=UDim2.new(0,SIDE,1,0),BackgroundTransparency=1,ClipsDescendants=true,Parent=Main})
 	local sideBg=New("Frame",{Size=UDim2.new(1,24,1,0),BackgroundColor3=C.Side,BackgroundTransparency=0.35,BorderSizePixel=0,Parent=Side})
 	Corner(sideBg,16)
@@ -2087,7 +2048,6 @@ function Odyssey:CreateWindow(opts)
 	local SideBottom=New("Frame",{Size=UDim2.new(1,-16,0,34),Position=UDim2.new(0,8,1,-42),BackgroundTransparency=1,Parent=Side})
 	VList(SideBottom,0)
 
-	-- ===== Content =====
 	local Content=New("Frame",{Name="Content",Position=UDim2.new(0,SIDE,0,0),Size=UDim2.new(1,-SIDE,1,0),BackgroundTransparency=1,Parent=Main})
 	local Header=New("Frame",{Name="Header",Size=UDim2.new(1,0,0,HEAD),BackgroundTransparency=1,Parent=Content})
 	MakeDraggable(Main,Header)
@@ -2104,7 +2064,6 @@ function Odyssey:CreateWindow(opts)
 	local SearchBtn=IconBtn(Header,"search","?",UDim2.new(1,-84,0.5,0),"Search")
 	CloseBtn.MouseButton1Click:Connect(function() Main.Visible=false end)
 
-	-- Compact: tab chips across the top + a search field that swaps in over them
 	local ChipBar=New("ScrollingFrame",{Size=UDim2.new(1,0,0,48),Position=UDim2.new(0,0,0,HEAD),BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=0,ScrollingDirection=Enum.ScrollingDirection.X,CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.X,ElasticBehavior=Enum.ElasticBehavior.Never,Visible=false,Parent=Content})
 	HList(ChipBar,6)
 	Pad(ChipBar,0,14,0,14)
@@ -2124,10 +2083,9 @@ function Odyssey:CreateWindow(opts)
 	local function ApplyLayout(mode)
 		if not SIZES[mode] then return end
 		layout=mode
-		-- Compact looks the same as Sidebar (tab list on the left), it just stacks
-		-- everything in one column instead of side-by-side boxes
+
 		local compact=(mode=="Compact")
-		local chips=false -- the old tabs-across-the-top bar is no longer used
+		local chips=false
 		local s=SIZES[mode]
 		Main.Size=minimized and UDim2.fromOffset(s.X,HEAD) or UDim2.fromOffset(s.X,s.Y)
 		Side.Visible=not chips
@@ -2168,7 +2126,6 @@ function Odyssey:CreateWindow(opts)
 	local toggleKey=Enum.KeyCode.RightShift
 	UserInputService.InputBegan:Connect(function(i,gp) if not gp and i.KeyCode==toggleKey then Main.Visible=not Main.Visible end end)
 
-	-- Floating open/close button: tap to show/hide, drag to move (a drag never toggles)
 	local MobileToggle=New("TextButton",{Name="OdysseyMobileToggle",Text="",BackgroundColor3=C.Card,BackgroundTransparency=0.02,BorderSizePixel=0,Size=UDim2.new(0,50,0,50),Position=UDim2.new(0,12,0.5,-25),AutoButtonColor=false,ZIndex=500,Parent=Gui})
 	Corner(MobileToggle,16)
 	local mtStroke=Stroke(MobileToggle,C.White,1.5,0)
@@ -2232,7 +2189,7 @@ function Odyssey:CreateWindow(opts)
 		box:GetPropertyChangedSignal("Text"):Connect(function() win:_runSearch(box.Text) end)
 	end
 	ApplyLayout(layout)
-	-- Auto-fit small screens (phones) so the whole window is on screen
+
 	pcall(function()
 		local vp=workspace.CurrentCamera.ViewportSize
 		local sz=SIZES[layout]
@@ -2252,7 +2209,7 @@ function Odyssey:CreateWindow(opts)
 		["Large"]=1,
 		["Extra Large"]=1.15,
 	}
-	settingsTab:CreateDropdown({
+	local uiSizeDD=settingsTab:CreateDropdown({
 		Name="UI Size",
 		Options={"Mobile","Small","Normal","Large","Extra Large"},
 		CurrentOption="Normal",
@@ -2261,16 +2218,17 @@ function Odyssey:CreateWindow(opts)
 		Flag="OdysseyUISize",
 		Callback=function(v)
 			OdysseyUIScale.Scale=UIScalePresets[v] or 0.9
+			Odyssey.Flags["OdysseyUISize"]=v
 		end,
 	})
-	settingsTab:CreateDropdown({
+	local layoutDD=settingsTab:CreateDropdown({
 		Name="Layout",
 		Options={"Sidebar","Compact"},
 		CurrentOption=layout,
 		MultipleOptions=false,
 		Description="Compact is a smaller window with everything in one column - better for phones",
 		Flag="OdysseyLayout",
-		Callback=function(v) ApplyLayout(v) end,
+		Callback=function(v) ApplyLayout(v) Odyssey.Flags["OdysseyLayout"]=v end,
 	})
 	settingsTab:CreateButton({
 		Name="Destroy UI",
@@ -2325,7 +2283,7 @@ function Odyssey:CreateWindow(opts)
 			local TS=game:GetService("TeleportService")
 			local lp=Players.LocalPlayer
 			win:Notify({Title="Odyssey", Content="Rejoining...", Duration=3})
-			-- if the same-server teleport fails, join the game normally instead
+
 			local failConn
 			failConn=lp.OnTeleport:Connect(function(state)
 				if state==Enum.TeleportState.Failed then
@@ -2337,7 +2295,7 @@ function Odyssey:CreateWindow(opts)
 				if plr==lp then pcall(function() TS:Teleport(game.PlaceId, lp) end) end
 			end) end)
 			if #Players:GetPlayers()<=1 then
-				-- alone in the server: it shuts down when you leave, so the same server can't be rejoined
+
 				pcall(function() TS:Teleport(game.PlaceId, lp) end)
 			else
 				local ok=pcall(function() TS:TeleportToPlaceInstance(game.PlaceId, game.JobId, lp) end)
@@ -2384,8 +2342,6 @@ function Odyssey:CreateWindow(opts)
 
 	settingsTab:CreateSection("THEME")
 
-	-- BULLETPROOF theme apply: directly builds and assigns the gradient inline,
-	-- no shared function/table indirection between theme name and its colors.
 	local function ApplyThemeDirect(themeName)
 		FooterTheme.Text="Theme: "..tostring(themeName)
 		local seq
@@ -2420,7 +2376,7 @@ function Odyssey:CreateWindow(opts)
 			seq=ColorSequence.new({ColorSequenceKeypoint.new(0,Color3.fromRGB(0,210,255)),ColorSequenceKeypoint.new(0.5,Color3.fromRGB(58,92,255)),ColorSequenceKeypoint.new(1,Color3.fromRGB(138,30,255))})
 			currentLT2BG=Color3.fromRGB(48,110,255)
 		else
-			-- Custom theme fallback: look up from Themes table
+
 			local t=Themes[themeName]
 			if not t then return end
 			seq=ColorSequence.new({ColorSequenceKeypoint.new(0,t.c1),ColorSequenceKeypoint.new(0.5,t.c2),ColorSequenceKeypoint.new(1,t.c3)})
@@ -2431,9 +2387,9 @@ function Odyssey:CreateWindow(opts)
 		currentThemeColors={c1=seq.Keypoints[1].Value,c2=seq.Keypoints[2].Value,c3=seq.Keypoints[3].Value}
 		if OdysseyMainRef then
 			pcall(function()
-				-- Set solid background color FIRST as a guaranteed-visible base color
+
 				OdysseyMainRef.BackgroundColor3=seq.Keypoints[2].Value
-				-- Then layer the gradient on top for the multi-color effect
+
 				for _,old in ipairs(OdysseyMainRef:GetChildren()) do
 					if old:IsA("UIGradient") then old:Destroy() end
 				end
@@ -2444,7 +2400,7 @@ function Odyssey:CreateWindow(opts)
 				OdysseyGradient=grad
 			end)
 		end
-		-- Keep every progress bar's fill in sync with the new theme
+
 		for grad,_ in pairs(ProgressBarGradients) do
 			pcall(function()
 				if grad and grad.Parent then grad.Color=seq end
@@ -2474,7 +2430,7 @@ function Odyssey:CreateWindow(opts)
 			local was=lt2ThemeEnabled
 			lt2ThemeEnabled=v
 			if v then
-				-- already on at startup (it styles itself once when loading), so don't run it twice
+
 				if was then return end
 				task.spawn(function() ApplyLT2Theme(currentLT2BG) end)
 			else
@@ -2502,9 +2458,7 @@ function Odyssey:CreateWindow(opts)
 	local THEMES_FOLDER="Odyssey/OdysseyConfigs/Themes"
 	local FOLDERS={"Odyssey","Odyssey/OdysseyBuilds","Odyssey/OdysseyConfigs",THEMES_FOLDER,"Odyssey/OdysseySlotNames","Odyssey/Pre-Builts","Odyssey/Pre-Builts/WireArt","Odyssey/Pre-Builts/Creation"}
 	local function ensureFolders() pcall(function() for _,f in ipairs(FOLDERS) do if not isfolder(f) then makefolder(f) end end end) end
-	-- Makes the folders on startup, saves each preset theme into the Themes folder (never
-	-- overwrites one that's already there) and adds any extra theme files to the dropdown.
-	-- The presets also stay built in, so themes still work if files can't be read.
+
 	task.defer(function()
 		ensureFolders()
 		pcall(function()
@@ -2560,7 +2514,15 @@ function Odyssey:CreateWindow(opts)
 				themeDD:Set({CurrentOption=savedTheme})
 			end
 			local savedLayout=Odyssey.Flags["OdysseyLayout"]
-			if savedLayout=="Sidebar" or savedLayout=="Compact" then ApplyLayout(savedLayout) end
+			if savedLayout=="Sidebar" or savedLayout=="Compact" then
+				ApplyLayout(savedLayout)
+				pcall(function() layoutDD:Set({CurrentOption=savedLayout}) end)
+			end
+			local savedSize=Odyssey.Flags["OdysseyUISize"]
+			if savedSize and UIScalePresets[savedSize] then
+				OdysseyUIScale.Scale=UIScalePresets[savedSize]
+				pcall(function() uiSizeDD:Set({CurrentOption=savedSize}) end)
+			end
 		end)
 	end
 
