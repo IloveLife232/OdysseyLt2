@@ -2499,8 +2499,39 @@ function Odyssey:CreateWindow(opts)
 	})
 
 	local CONFIG_PATH="Odyssey/OdysseyConfigs/config.json"
-	local FOLDERS={"Odyssey","Odyssey/OdysseyBuilds","Odyssey/OdysseyConfigs","Odyssey/OdysseyConfigs/CustomThemes","Odyssey/OdysseySlotNames"}
+	local THEMES_FOLDER="Odyssey/OdysseyConfigs/Themes"
+	local FOLDERS={"Odyssey","Odyssey/OdysseyBuilds","Odyssey/OdysseyConfigs",THEMES_FOLDER,"Odyssey/OdysseySlotNames","Odyssey/Pre-Builts","Odyssey/Pre-Builts/WireArt","Odyssey/Pre-Builts/Creation"}
 	local function ensureFolders() pcall(function() for _,f in ipairs(FOLDERS) do if not isfolder(f) then makefolder(f) end end end) end
+	-- Makes the folders on startup, saves each preset theme into the Themes folder (never
+	-- overwrites one that's already there) and adds any extra theme files to the dropdown.
+	-- The presets also stay built in, so themes still work if files can't be read.
+	task.defer(function()
+		ensureFolders()
+		pcall(function()
+			local HS=game:GetService("HttpService")
+			local function rgb(c) return {math.floor(c.R*255+0.5),math.floor(c.G*255+0.5),math.floor(c.B*255+0.5)} end
+			for name,t in pairs(Themes) do
+				local path=THEMES_FOLDER.."/"..name..".json"
+				if not isfile(path) then
+					writefile(path,HS:JSONEncode({c1=rgb(t.c1),c2=rgb(t.c2),c3=rgb(t.c3),LT2BG=rgb(t.LT2BG or t.c2),accent=t.accent and rgb(t.accent) or nil}))
+				end
+			end
+			local added=false
+			for _,fname in ipairs(listfiles(THEMES_FOLDER)) do
+				local themeName=fname:match("([^/\\]+)%.json$")
+				if themeName and not Themes[themeName] then
+					local ok,data=pcall(function() return HS:JSONDecode(readfile(fname)) end)
+					if ok and type(data)=="table" and data.c1 and data.c2 and data.c3 then
+						local function c(x) return Color3.fromRGB(x[1],x[2],x[3]) end
+						Themes[themeName]={c1=c(data.c1),c2=c(data.c2),c3=c(data.c3),LT2BG=data.LT2BG and c(data.LT2BG) or c(data.c2),accent=data.accent and c(data.accent) or nil}
+						table.insert(themeNames,themeName)
+						added=true
+					end
+				end
+			end
+			if added then table.sort(themeNames) themeDD:Set({Options=themeNames}) end
+		end)
+	end)
 	local function saveConfig()
 		pcall(function()
 			ensureFolders()
