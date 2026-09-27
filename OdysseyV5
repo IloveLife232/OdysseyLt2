@@ -1,4 +1,4 @@
--- Odyssey UI Library v3
+-- Odyssey UI Library v6 (Sidebar + Compact layouts, same API as v4/v5)
 local Odyssey = {}
 Odyssey.__index = Odyssey
 Odyssey.Flags = {}
@@ -281,16 +281,23 @@ local function StyleLT2Gui(v,themeColor)
 	local panelCol=C.BG:Lerp(themeColor,0.14)
 	local buttonCol=C.Hover:Lerp(themeColor,0.25)
 	local viewport=workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920,1080)
+	-- Read every size first, before changing anything. Reading a size right after changing
+	-- something makes Roblox redo the whole menu layout each time, which was the freeze.
+	local all=v:GetDescendants()
+	local overlay={}
+	for _,d in ipairs(all) do
+		if d:IsA("GuiObject") then
+			local ok,sz=pcall(function() return d.AbsoluteSize end)
+			-- Skip large full-screen overlays (fades, transitions) to avoid blacking out the game
+			if ok and sz.X>=viewport.X*0.85 and sz.Y>=viewport.Y*0.85 then overlay[d]=true end
+		end
+	end
 	local n=0
-	for _,d in ipairs(v:GetDescendants()) do
+	for _,d in ipairs(all) do
 		n=n+1
 		if n%250==0 then task.wait() end -- spread work over frames so there is no freeze
 		pcall(function()
-				-- Skip large full-screen overlays (fades, transitions) to avoid blacking out the game
-				if d:IsA("GuiObject") then
-					local sz=d.AbsoluteSize
-					if sz.X>=viewport.X*0.85 and sz.Y>=viewport.Y*0.85 then return end
-				end
+				if overlay[d] or not d.Parent then return end
 				if d.Name=="DropShadow" then d:Destroy() return end
 				if not d:IsA("GuiObject") then return end
 				if not OriginalColors[d] then
@@ -2312,9 +2319,27 @@ function Odyssey:CreateWindow(opts)
 		Name="Rejoin Server",
 		Description="Rejoins the exact same server you're currently in",
 		Callback=function()
-			pcall(function()
-				game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId, Players.LocalPlayer)
+			local TS=game:GetService("TeleportService")
+			local lp=Players.LocalPlayer
+			win:Notify({Title="Odyssey", Content="Rejoining...", Duration=3})
+			-- if the same-server teleport fails, join the game normally instead
+			local failConn
+			failConn=lp.OnTeleport:Connect(function(state)
+				if state==Enum.TeleportState.Failed then
+					failConn:Disconnect()
+					pcall(function() TS:Teleport(game.PlaceId, lp) end)
+				end
 			end)
+			pcall(function() TS.TeleportInitFailed:Connect(function(plr)
+				if plr==lp then pcall(function() TS:Teleport(game.PlaceId, lp) end) end
+			end) end)
+			if #Players:GetPlayers()<=1 then
+				-- alone in the server: it shuts down when you leave, so the same server can't be rejoined
+				pcall(function() TS:Teleport(game.PlaceId, lp) end)
+			else
+				local ok=pcall(function() TS:TeleportToPlaceInstance(game.PlaceId, game.JobId, lp) end)
+				if not ok then pcall(function() TS:Teleport(game.PlaceId, lp) end) end
+			end
 		end,
 	})
 
@@ -2443,179 +2468,17 @@ function Odyssey:CreateWindow(opts)
 		CurrentValue=true,
 		Tooltip="Toggle LT2 menu recolor",
 		Callback=function(v)
+			local was=lt2ThemeEnabled
 			lt2ThemeEnabled=v
 			if v then
+				-- already on at startup (it styles itself once when loading), so don't run it twice
+				if was then return end
 				task.spawn(function() ApplyLT2Theme(currentLT2BG) end)
 			else
 				task.spawn(function() RevertLT2Theme() end)
 			end
 		end,
 	})
-
-	-- ===== CUSTOM THEME CREATOR (same THEME section, no separate header) =====
-	local CUSTOM_THEME_FOLDER="Odyssey/OdysseyConfigs/CustomThemes"
-	local function ensureCustomThemeFolder()
-		pcall(function()
-			if not isfolder("Odyssey") then makefolder("Odyssey") end
-			if not isfolder("Odyssey/OdysseyConfigs") then makefolder("Odyssey/OdysseyConfigs") end
-			if not isfolder(CUSTOM_THEME_FOLDER) then makefolder(CUSTOM_THEME_FOLDER) end
-		end)
-	end
-
-	local customC1=Color3.fromRGB(255,255,255)
-	local customC2=Color3.fromRGB(180,180,180)
-	local customC3=Color3.fromRGB(100,100,100)
-	local customAccent=Color3.fromRGB(255,255,255)
-	local customNameValue="MyTheme"
-
-	settingsTab:CreateInput({
-		Name="Theme name",
-		PlaceholderText="Enter a name...",
-		Callback=function(v) if v~="" then customNameValue=v end end,
-	})
-
-	local function ApplyCustomPreview()
-		local newSeq=ColorSequence.new({
-			ColorSequenceKeypoint.new(0,customC1),
-			ColorSequenceKeypoint.new(0.5,customC2),
-			ColorSequenceKeypoint.new(1,customC3),
-		})
-		if OdysseyMainRef then
-			pcall(function()
-				OdysseyMainRef.BackgroundColor3=newSeq.Keypoints[2].Value
-				for _,old in ipairs(OdysseyMainRef:GetChildren()) do
-					if old:IsA("UIGradient") then old:Destroy() end
-				end
-				local grad=Instance.new("UIGradient")
-				grad.Color=newSeq
-				grad.Rotation=120
-				grad.Parent=OdysseyMainRef
-				OdysseyGradient=grad
-			end)
-		end
-		T.Accent=customAccent
-		T.AccentHov=customAccent
-		currentThemeColors={c1=customC1,c2=customC2,c3=customC3}
-		for g,_ in pairs(ProgressBarGradients) do pcall(function() if g and g.Parent then g.Color=newSeq end end) end
-		-- Keep LT2 menus in sync with the live preview too, not just the UI itself
-		currentLT2BG=customC2
-		if lt2ThemeEnabled then
-			task.spawn(function() ApplyLT2Theme(currentLT2BG) end)
-		end
-	end
-
-	settingsTab:CreateColorPicker({
-		Name="Gradient Start",
-		Color=customC1,
-		Callback=function(v) customC1=v; ApplyCustomPreview() end,
-	})
-	settingsTab:CreateColorPicker({
-		Name="Gradient Middle",
-		Color=customC2,
-		Callback=function(v) customC2=v; ApplyCustomPreview() end,
-	})
-	settingsTab:CreateColorPicker({
-		Name="Gradient End",
-		Color=customC3,
-		Callback=function(v) customC3=v; ApplyCustomPreview() end,
-	})
-	settingsTab:CreateColorPicker({
-		Name="Accent Color",
-		Color=customAccent,
-		Tooltip="Controls buttons, sliders, toggles and text highlights",
-		Callback=function(v) customAccent=v; ApplyCustomPreview() end,
-	})
-
-	settingsTab:CreateInput({
-		Name="Theme Code",
-		PlaceholderText='{"c1":[R,G,B],"c2":[R,G,B],"c3":[R,G,B],"accent":[R,G,B]}',
-		Enter=true,
-		Description="Paste exported theme JSON here to test/load it directly",
-		Callback=function(v)
-			local ok,data=pcall(function() return game:GetService("HttpService"):JSONDecode(v) end)
-			if not ok or not data or not data.c1 or not data.c2 or not data.c3 then
-				Window:Notify({Title="Odyssey", Content="Invalid theme code", Duration=3})
-				return
-			end
-			customC1=Color3.fromRGB(data.c1[1],data.c1[2],data.c1[3])
-			customC2=Color3.fromRGB(data.c2[1],data.c2[2],data.c2[3])
-			customC3=Color3.fromRGB(data.c3[1],data.c3[2],data.c3[3])
-			customAccent=data.accent and Color3.fromRGB(data.accent[1],data.accent[2],data.accent[3]) or customC2
-			ApplyCustomPreview()
-			Window:Notify({Title="Odyssey", Content="Theme code loaded! Save it below to keep it", Duration=4})
-		end,
-	})
-
-	local function saveCustomTheme(themeName,c1,c2,c3,accent)
-		pcall(function()
-			ensureCustomThemeFolder()
-			local data={
-				c1={c1.R*255,c1.G*255,c1.B*255},
-				c2={c2.R*255,c2.G*255,c2.B*255},
-				c3={c3.R*255,c3.G*255,c3.B*255},
-				accent={accent.R*255,accent.G*255,accent.B*255},
-			}
-			writefile(CUSTOM_THEME_FOLDER.."/"..themeName..".json",game:GetService("HttpService"):JSONEncode(data))
-		end)
-	end
-
-	local function loadCustomThemesFromFolder()
-		pcall(function()
-			ensureCustomThemeFolder()
-			for _,fname in ipairs(listfiles(CUSTOM_THEME_FOLDER)) do
-				local themeName=fname:match("([^/\\]+)%.json$")
-				if themeName and not Themes[themeName] then
-					local ok,data=pcall(function() return game:GetService("HttpService"):JSONDecode(readfile(fname)) end)
-					if ok and data and data.c1 and data.c2 and data.c3 then
-						local accentCol = data.accent and Color3.fromRGB(data.accent[1],data.accent[2],data.accent[3]) or Color3.fromRGB(data.c2[1],data.c2[2],data.c2[3])
-						Themes[themeName]={
-							c1=Color3.fromRGB(data.c1[1],data.c1[2],data.c1[3]),
-							c2=Color3.fromRGB(data.c2[1],data.c2[2],data.c2[3]),
-							c3=Color3.fromRGB(data.c3[1],data.c3[2],data.c3[3]),
-							LT2BG=Color3.fromRGB(data.c2[1],data.c2[2],data.c2[3]),
-							accent=accentCol,
-						}
-						table.insert(themeNames,themeName)
-						table.sort(themeNames)
-					end
-				end
-			end
-		end)
-	end
-
-	settingsTab:CreateButton({
-		Name="Save custom theme",
-		Description="Saves your custom colors as a new theme and adds it to the dropdown above",
-		Tooltip="Adds your 3 chosen colors as a new selectable theme",
-		Callback=function()
-			if customNameValue=="" then return end
-			Themes[customNameValue]={c1=customC1,c2=customC2,c3=customC3,LT2BG=customC2,accent=customAccent}
-			saveCustomTheme(customNameValue,customC1,customC2,customC3,customAccent)
-			table.insert(themeNames,customNameValue)
-			table.sort(themeNames)
-			themeDD:Set({Options=themeNames})
-			win:Notify({Title="Custom Theme",Content="\""..customNameValue.."\" saved and added!",Duration=3})
-		end,
-	})
-
-	settingsTab:CreateButton({
-		Name="Copy custom theme code",
-		Description="Copies a Lua table snippet of your current custom colors to your clipboard",
-		Tooltip="Paste this into the theme table to share or reuse it",
-		Callback=function()
-			local function toRGB(c) return math.floor(c.R*255)..","..math.floor(c.G*255)..","..math.floor(c.B*255) end
-			local code = "[\""..customNameValue.."\"]={c1=Color3.fromRGB("..toRGB(customC1)..
-				"),c2=Color3.fromRGB("..toRGB(customC2)..
-				"),c3=Color3.fromRGB("..toRGB(customC3)..
-				"),LT2BG=Color3.fromRGB("..toRGB(customC2)..
-				"),accent=Color3.fromRGB("..toRGB(customAccent).."),},"
-			pcall(function() setclipboard(code) end)
-			win:Notify({Title="Copied",Content="Custom theme code copied to clipboard!",Duration=3})
-		end,
-	})
-
-	loadCustomThemesFromFolder()
-	if #themeNames>10 then themeDD:Set({Options=themeNames}) end
 
 	settingsTab:CreateSection("CONFIG")
 	local pathRow=New("Frame",{BackgroundTransparency=1,Size=UDim2.new(1,0,0,24),LayoutOrder=settingsTab._order,Parent=settingsTab._list})
