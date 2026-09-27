@@ -1451,7 +1451,7 @@ function Window:_buildHomeTab(gameName)
 	self._homeRelayout=function(compact)
 		homeCompact=compact
 		task.defer(function() syncLog() end)
-		statsGL.CellSize=compact and UDim2.new(0.5,-4,0,62) or UDim2.new(0.25,-6,0,62)
+		statsGL.CellSize=compact and UDim2.new(1,0,0,62) or UDim2.new(0.25,-6,0,62)
 		colsL.FillDirection=compact and Enum.FillDirection.Vertical or Enum.FillDirection.Horizontal
 		local w=compact and UDim2.new(1,0,0,0) or UDim2.new(0.5,-5,0,0)
 		colL.Size=w; colR.Size=w
@@ -2013,7 +2013,7 @@ function Odyssey:CreateWindow(opts)
 
 	local SIDE=172
 	local HEAD=54
-	local SIZES={Sidebar=Vector2.new(760,480),Compact=Vector2.new(440,470)}
+	local SIZES={Sidebar=Vector2.new(760,480),Compact=Vector2.new(600,470)}
 	local layout=(UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled) and "Compact" or "Sidebar"
 	local minimized=false
 
@@ -2124,23 +2124,26 @@ function Odyssey:CreateWindow(opts)
 	local function ApplyLayout(mode)
 		if not SIZES[mode] then return end
 		layout=mode
+		-- Compact looks the same as Sidebar (tab list on the left), it just stacks
+		-- everything in one column instead of side-by-side boxes
 		local compact=(mode=="Compact")
+		local chips=false -- the old tabs-across-the-top bar is no longer used
 		local s=SIZES[mode]
 		Main.Size=minimized and UDim2.fromOffset(s.X,HEAD) or UDim2.fromOffset(s.X,s.Y)
-		Side.Visible=not compact
+		Side.Visible=not chips
 		SearchWrap.Visible=not minimized
 		NavScroll.Visible=not minimized
 		SideBottom.Visible=not minimized
 		SideDiv.Visible=not minimized
-		Content.Position=UDim2.new(0,compact and 0 or SIDE,0,0)
-		Content.Size=UDim2.new(1,compact and 0 or -SIDE,1,0)
-		CompactLogo.Visible=compact
-		local tx=compact and 54 or 20
+		Content.Position=UDim2.new(0,chips and 0 or SIDE,0,0)
+		Content.Size=UDim2.new(1,chips and 0 or -SIDE,1,0)
+		CompactLogo.Visible=chips
+		local tx=chips and 54 or 20
 		TitleWrap.Position=UDim2.new(0,tx,0,0)
-		SearchBtn.Visible=compact
-		ChipBar.Visible=compact and not minimized and not CSearchWrap.Visible
-		if not compact then CSearchWrap.Visible=false end
-		local top=compact and HEAD+48 or HEAD
+		SearchBtn.Visible=chips
+		ChipBar.Visible=chips and not minimized and not CSearchWrap.Visible
+		if not chips then CSearchWrap.Visible=false end
+		local top=chips and HEAD+48 or HEAD
 		ContentScroll.Position=UDim2.new(0,0,0,top)
 		ContentScroll.Size=UDim2.new(1,0,1,-(top+FOOT))
 		Footer.Visible=not minimized
@@ -2265,7 +2268,7 @@ function Odyssey:CreateWindow(opts)
 		Options={"Sidebar","Compact"},
 		CurrentOption=layout,
 		MultipleOptions=false,
-		Description="Compact puts the tabs across the top - better for phones",
+		Description="Compact is a smaller window with everything in one column - better for phones",
 		Flag="OdysseyLayout",
 		Callback=function(v) ApplyLayout(v) end,
 	})
