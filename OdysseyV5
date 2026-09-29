@@ -1997,15 +1997,28 @@ function Odyssey:CreateWindow(opts)
 	local Shade=New("Frame",{Name="Shade",Size=UDim2.new(1,0,1,0),BackgroundColor3=C.BG,BackgroundTransparency=0.12,BorderSizePixel=0,Parent=Main})
 	Corner(Shade,16); Stroke(Shade,C.CardStroke,1,0)
 
-	local function Logo(parent,size,pos)
-		local l=New("Frame",{Size=UDim2.new(0,size,0,size),Position=pos,BackgroundColor3=C.White,BorderSizePixel=0,Parent=parent})
-		Corner(l,math.floor(size*0.3)); AccentGrad(l,45)
-		local url=GetMaterialIcon("explore")
-		if url then
-			New("ImageLabel",{Image=url,ImageColor3=C.White,BackgroundTransparency=1,Size=UDim2.new(0,size-12,0,size-12),Position=UDim2.new(0,6,0,6),Parent=l})
-		else
-			New("TextLabel",{Text="O",TextSize=16,TextColor3=C.White,Font=Enum.Font.BuilderSansBold,BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),Parent=l})
+	local function TreeIcon(parent,size,z)
+		z=z or 1
+		local ok,holder=pcall(function() return New("CanvasGroup",{Size=UDim2.new(0,size,0,size),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),BackgroundTransparency=1,ZIndex=z,Parent=parent}) end)
+		if not ok or not holder then holder=New("Frame",{Size=UDim2.new(0,size,0,size),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),BackgroundTransparency=1,ZIndex=z,Parent=parent}) end
+		local parts={
+			{Color3.fromRGB(110,68,40),0.14,0.5,0.5,0.72,0,0.1},
+			{Color3.fromRGB(110,68,40),0.1,0.34,0.34,0.44,-38,0.1},
+			{Color3.fromRGB(110,68,40),0.1,0.34,0.66,0.44,38,0.1},
+			{Color3.fromRGB(46,125,50),0.34,0.3,0.24,0.3,0,0.12},
+			{Color3.fromRGB(46,125,50),0.34,0.3,0.76,0.3,0,0.12},
+			{Color3.fromRGB(88,178,72),0.38,0.32,0.5,0.2,0,0.12},
+			{Color3.fromRGB(120,200,95),0.14,0.08,0.44,0.1,0,0.3},
+		}
+		for i,pt in ipairs(parts) do
+			local b=New("Frame",{Size=UDim2.new(pt[2],0,pt[3],0),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(pt[4],0,pt[5],0),Rotation=pt[6],BackgroundColor3=pt[1],BorderSizePixel=0,ZIndex=z+i,Parent=holder})
+			Corner(b,math.max(1,math.floor(math.min(pt[2],pt[3])*size*pt[7])))
 		end
+		return holder
+	end
+	local function Logo(parent,size,pos)
+		local l=New("Frame",{Size=UDim2.new(0,size,0,size),Position=pos,BackgroundTransparency=1,BorderSizePixel=0,Parent=parent})
+		TreeIcon(l,size-8,(l.ZIndex or 1)+1)
 		return l
 	end
 	local function IconBtn(parent,iconName,fallback,pos,tip)
@@ -2133,23 +2146,11 @@ function Odyssey:CreateWindow(opts)
 	local mtScale=Instance.new("UIScale"); mtScale.Parent=MobileToggle
 	local mtOrb=New("Frame",{Size=UDim2.new(0,36,0,36),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),BackgroundColor3=C.White,BorderSizePixel=0,ZIndex=501,Parent=MobileToggle})
 	Corner(mtOrb,12); AccentGrad(mtOrb,45)
-	local mtIcon
-	do
-		local url=GetMaterialIcon("explore")
-		if url then
-			mtIcon=New("ImageLabel",{Image=url,ImageColor3=C.White,BackgroundTransparency=1,Size=UDim2.new(0,22,0,22),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),ZIndex=502,Parent=MobileToggle})
-		else
-			mtIcon=New("TextLabel",{Text="O",TextSize=18,TextColor3=C.White,Font=Enum.Font.BuilderSansBold,BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),ZIndex=502,Parent=MobileToggle})
-		end
-	end
+	local mtIcon=TreeIcon(MobileToggle,30,502)
 	local function mtRefresh()
 		local open=Main.Visible
-		TweenService:Create(mtOrb,TweenInfo.new(0.18),{BackgroundTransparency=open and 0 or 1}):Play()
-		if mtIcon:IsA("ImageLabel") then
-			TweenService:Create(mtIcon,TweenInfo.new(0.18),{ImageColor3=open and C.White or Color3.fromRGB(150,170,255),Rotation=open and 0 or -45}):Play()
-		else
-			mtIcon.TextColor3=open and C.White or Color3.fromRGB(150,170,255)
-		end
+		mtOrb.BackgroundTransparency=1
+		TweenService:Create(mtIcon,TweenInfo.new(0.35,Enum.EasingStyle.Back),{Rotation=open and 0 or -90}):Play()
 	end
 	Main:GetPropertyChangedSignal("Visible"):Connect(mtRefresh)
 	mtRefresh()
