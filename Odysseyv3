@@ -2067,12 +2067,25 @@ function Odyssey:CreateWindow(opts)
 	MakeDraggable(Main,Header)
 	New("Frame",{Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BackgroundColor3=C.CardStroke,BorderSizePixel=0,Parent=Header})
 	local CompactLogo=Logo(Header,30,UDim2.new(0,14,0.5,-15))
-	local TitleWrap=New("Frame",{BackgroundTransparency=1,Size=UDim2.new(1,tier and -230 or -150,1,0),Position=UDim2.new(0,20,0,0),ClipsDescendants=true,Parent=Header})
+	local TitleWrap=New("Frame",{BackgroundTransparency=1,Size=UDim2.new(1,tier and -250 or -150,1,0),Position=UDim2.new(0,20,0,0),ClipsDescendants=true,Parent=Header})
 	if tier then
-		local TIER_COLORS={Testers={Color3.fromRGB(150,95,255),Color3.new(1,1,1)},Paid={Color3.fromRGB(255,196,56),Color3.fromRGB(35,25,5)},Free={Color3.fromRGB(70,200,110),Color3.fromRGB(8,30,15)}}
-		local tc=TIER_COLORS[tier] or {C.Field,C.Text}
-		local pill=New("TextLabel",{Name="OdysseyTier",Text=string.upper(tier),TextSize=13,TextColor3=tc[2],Font=Enum.Font.BuilderSansBold,BackgroundColor3=tc[1],BackgroundTransparency=0,BorderSizePixel=0,AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-120,0.5,0),Size=UDim2.new(0,0,0,24),AutomaticSize=Enum.AutomaticSize.X,ZIndex=5,Parent=Header})
-		Corner(pill,12); Pad(pill,0,12,0,12)
+		local SOLID={Paid={Color3.fromRGB(255,196,56),Color3.fromRGB(35,25,5)},Free={Color3.fromRGB(70,200,110),Color3.fromRGB(8,30,15)}}
+		local solid=tier~="Testers" and (SOLID[tier] or {C.Field,C.Text}) or nil
+		local pill=New("Frame",{Name="OdysseyTier",BackgroundColor3=solid and solid[1] or Color3.new(1,1,1),BackgroundTransparency=0,BorderSizePixel=0,AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-120,0.5,0),Size=UDim2.new(0,0,0,28),AutomaticSize=Enum.AutomaticSize.X,ZIndex=5,Parent=Header})
+		Corner(pill,14); Pad(pill,0,14,0,14)
+		New("TextLabel",{Text=string.upper(tier),TextSize=15,TextColor3=solid and solid[2] or Color3.new(1,1,1),TextStrokeColor3=Color3.new(0,0,0),TextStrokeTransparency=solid and 1 or 0.3,Font=Enum.Font.BuilderSansBold,BackgroundTransparency=1,Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,ZIndex=6,Parent=pill})
+		local grad=not solid and Instance.new("UIGradient") or nil
+		if grad then grad.Parent=pill end
+		local rc
+		if grad then rc=RunService.Heartbeat:Connect(function()
+			if not pill.Parent then rc:Disconnect() return end
+			local h=(os.clock()*0.12)%1
+			grad.Color=ColorSequence.new({
+				ColorSequenceKeypoint.new(0,Color3.fromHSV(h,0.75,1)),
+				ColorSequenceKeypoint.new(0.5,Color3.fromHSV((h+0.17)%1,0.75,1)),
+				ColorSequenceKeypoint.new(1,Color3.fromHSV((h+0.34)%1,0.75,1)),
+			})
+		end) end
 	end
 	local twl=HList(TitleWrap,10)
 	twl.VerticalAlignment=Enum.VerticalAlignment.Center
