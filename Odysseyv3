@@ -2563,7 +2563,7 @@ function Odyssey:CreateWindow(opts)
 	makeConfigBtn("Delete config","Permanently delete saved config",function() pcall(function() if isfile(CONFIG_PATH) then delfile(CONFIG_PATH) end end); win:Notify({Title="Config",Content="Config deleted",Duration=3}) end)
 
 	settingsTab:CreateSection("CREDITS")
-	settingsTab:CreateParagraph({Title="Odyssey UI",Text="Script by: IHateSchool & Vaxeal\nUI Library: Odyssey Lib v6\nTesters: Nazab, Pete <3 & Gludgy"})
+	settingsTab:CreateParagraph({Title="Odyssey UI",Text="Script by: IHateSchool & Vaxeal\nUI Library: Odyssey Lib v3\nTesters: Nazab, Pete <3, Skat3OrDi3, Jwiehan & Tiny Turtle\nOdyssey Helpers: Silent, Cazed & Vaxeal"})
 
 	function win:Notify(nopts2) Window.Notify(self,nopts2) end
 	function win:SetKeybind(key) toggleKey=key end
