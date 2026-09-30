@@ -2069,10 +2069,10 @@ function Odyssey:CreateWindow(opts)
 	local CompactLogo=Logo(Header,30,UDim2.new(0,14,0.5,-15))
 	local TitleWrap=New("Frame",{BackgroundTransparency=1,Size=UDim2.new(1,tier and -230 or -150,1,0),Position=UDim2.new(0,20,0,0),ClipsDescendants=true,Parent=Header})
 	if tier then
-		local TIER_COLORS={Testers=Color3.fromRGB(175,120,255),Paid=Color3.fromRGB(255,193,64),Free=Color3.fromRGB(90,205,125)}
-		local tc=TIER_COLORS[tier] or C.Muted
-		local pill=New("TextLabel",{Name="OdysseyTier",Text=string.upper(tier),TextSize=11,TextColor3=tc,Font=Enum.Font.BuilderSansBold,BackgroundColor3=tc,BackgroundTransparency=0.82,BorderSizePixel=0,AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-120,0.5,0),Size=UDim2.new(0,0,0,22),AutomaticSize=Enum.AutomaticSize.X,Parent=Header})
-		Corner(pill,11); Stroke(pill,tc,1,0.35); Pad(pill,0,10,0,10)
+		local TIER_COLORS={Testers={Color3.fromRGB(150,95,255),Color3.new(1,1,1)},Paid={Color3.fromRGB(255,196,56),Color3.fromRGB(35,25,5)},Free={Color3.fromRGB(70,200,110),Color3.fromRGB(8,30,15)}}
+		local tc=TIER_COLORS[tier] or {C.Field,C.Text}
+		local pill=New("TextLabel",{Name="OdysseyTier",Text=string.upper(tier),TextSize=13,TextColor3=tc[2],Font=Enum.Font.BuilderSansBold,BackgroundColor3=tc[1],BackgroundTransparency=0,BorderSizePixel=0,AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-120,0.5,0),Size=UDim2.new(0,0,0,24),AutomaticSize=Enum.AutomaticSize.X,ZIndex=5,Parent=Header})
+		Corner(pill,12); Pad(pill,0,12,0,12)
 	end
 	local twl=HList(TitleWrap,10)
 	twl.VerticalAlignment=Enum.VerticalAlignment.Center
