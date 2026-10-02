@@ -761,6 +761,7 @@ function Tab:CreateSlider(opts)
 	opts=opts or {}
 	local range=opts.Range or {0,100}
 	local minV,maxV=range[1],range[2]
+	local inMax=opts.InputMax or maxV
 	local inc=opts.Increment or 1
 	local defV=opts.CurrentValue or minV
 	local cb=opts.Callback
@@ -788,7 +789,7 @@ function Tab:CreateSlider(opts)
 	Corner(thumbBtn,8)
 	if tipOnly(opts) then AddTooltip(topRow,opts.Tooltip) end
 	local function setVisual(v)
-		local p=pctOf(v)
+		local p=pctOf(math.clamp(v,minV,maxV))
 		valLbl.Text=fmt(v)
 		fill.Size=UDim2.new(p,0,1,0)
 		thumbBtn.Position=UDim2.new(p,-8,0.5,-8)
@@ -823,7 +824,7 @@ function Tab:CreateSlider(opts)
 	valLbl.FocusLost:Connect(function()
 		local n=tonumber(valLbl.Text)
 		if not n then valLbl.Text=fmt(defV) return end
-		local v=math.clamp(math.floor(n/inc+0.5)*inc,minV,maxV)
+		local v=math.clamp(math.floor(n/inc+0.5)*inc,minV,inMax)
 		commit(v)
 	end)
 	reg(self,opts.Name,card)
