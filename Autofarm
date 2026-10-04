@@ -1,0 +1,161 @@
+local Lib = {}
+
+function Lib.new(title, opts)
+    opts = opts or {}
+    local UIS = game:GetService("UserInputService")
+    local LP = game:GetService("Players").LocalPlayer
+    local W = opts.Width or 230
+    local H = opts.Height or 330
+    local accent = opts.Accent or Color3.fromRGB(123, 140, 255)
+    local holder = gethui and gethui() or game:GetService("CoreGui")
+    local name = opts.Name or title
+    local old = holder:FindFirstChild(name)
+    if old then old:Destroy() end
+    local gui = Instance.new("ScreenGui")
+    gui.Name = name
+    gui.ResetOnSpawn = false
+    pcall(function() gui.Parent = holder end)
+    if not gui.Parent then gui.Parent = LP:WaitForChild("PlayerGui") end
+
+    local f = Instance.new("Frame")
+    f.Size = UDim2.fromOffset(W, H)
+    f.Position = opts.Position or UDim2.new(0, 20, 0.2, 0)
+    f.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+    f.BorderSizePixel = 0
+    f.Active = true
+    f.Parent = gui
+    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 10)
+    local st = Instance.new("UIStroke", f)
+    st.Color = accent
+    st.Thickness = 1.2
+
+    local top = Instance.new("TextLabel")
+    top.Size = UDim2.new(1, -40, 0, 28)
+    top.Position = UDim2.fromOffset(10, 2)
+    top.BackgroundTransparency = 1
+    top.Text = title
+    top.TextColor3 = Color3.new(1, 1, 1)
+    top.Font = Enum.Font.GothamBold
+    top.TextSize = 15
+    top.TextXAlignment = Enum.TextXAlignment.Left
+    top.Parent = f
+
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Size = UDim2.fromOffset(24, 22)
+    closeBtn.Position = UDim2.new(1, -30, 0, 4)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(140, 60, 60)
+    closeBtn.Text = "X"
+    closeBtn.TextColor3 = Color3.new(1, 1, 1)
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.TextSize = 13
+    closeBtn.Parent = f
+    Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
+
+    local sc = Instance.new("ScrollingFrame")
+    sc.Size = UDim2.new(1, -12, 1, -36)
+    sc.Position = UDim2.fromOffset(6, 32)
+    sc.BackgroundTransparency = 1
+    sc.BorderSizePixel = 0
+    sc.ScrollBarThickness = 3
+    sc.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    sc.CanvasSize = UDim2.new()
+    sc.Parent = f
+    local lay = Instance.new("UIListLayout", sc)
+    lay.Padding = UDim.new(0, 5)
+    lay.SortOrder = Enum.SortOrder.LayoutOrder
+
+    local win = {Gui = gui, Frame = f, Accent = accent}
+    local order = 0
+    local function nextOrder() order += 1 return order end
+    local closeFns = {}
+    closeBtn.Activated:Connect(function()
+        for _, fn in ipairs(closeFns) do pcall(fn) end
+        gui:Destroy()
+    end)
+    function win:OnClose(fn) table.insert(closeFns, fn) end
+
+    function win:Label(text, size, color, h)
+        local l = Instance.new("TextLabel")
+        l.Size = UDim2.new(1, -6, 0, h or 18)
+        l.BackgroundTransparency = 1
+        l.Text = text
+        l.TextColor3 = color or Color3.fromRGB(200, 200, 215)
+        l.Font = Enum.Font.GothamBold
+        l.TextSize = size or 12
+        l.TextWrapped = true
+        l.TextXAlignment = Enum.TextXAlignment.Left
+        l.LayoutOrder = nextOrder()
+        l.Parent = sc
+        return l
+    end
+    function win:Section(text)
+        return win:Label(text, 12, Color3.fromRGB(150, 165, 255))
+    end
+    function win:Row()
+        local r = Instance.new("Frame")
+        r.Size = UDim2.new(1, -6, 0, 28)
+        r.BackgroundTransparency = 1
+        r.LayoutOrder = nextOrder()
+        r.Parent = sc
+        local l = Instance.new("UIListLayout", r)
+        l.FillDirection = Enum.FillDirection.Horizontal
+        l.Padding = UDim.new(0, 4)
+        return r
+    end
+    function win:Button(parent, text, w, color, fn)
+        local b = Instance.new("TextButton")
+        b.Size = UDim2.new(w, w == 1 and 0 or -3, 1, 0)
+        b.BackgroundColor3 = color or Color3.fromRGB(45, 45, 62)
+        b.Text = text
+        b.TextColor3 = Color3.new(1, 1, 1)
+        b.Font = Enum.Font.GothamBold
+        b.TextSize = 12
+        b.TextWrapped = true
+        b.Parent = parent or win:Row()
+        Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+        b.Activated:Connect(function() task.spawn(fn, b) end)
+        return b
+    end
+    function win:Input(parent, w, default, fn, placeholder)
+        local b = Instance.new("TextBox")
+        b.Size = UDim2.new(w, -3, 1, 0)
+        b.BackgroundColor3 = Color3.fromRGB(32, 32, 44)
+        b.Text = tostring(default or "")
+        b.PlaceholderText = placeholder or ""
+        b.TextColor3 = Color3.new(1, 1, 1)
+        b.PlaceholderColor3 = Color3.fromRGB(140, 140, 150)
+        b.Font = Enum.Font.Gotham
+        b.TextSize = 12
+        b.ClearTextOnFocus = false
+        b.TextTruncate = Enum.TextTruncate.AtEnd
+        b.Parent = parent or win:Row()
+        Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+        b.FocusLost:Connect(function() fn(b) end)
+        return b
+    end
+    function win:Cycler(parent, list, getIdx, setIdx)
+        parent = parent or win:Row()
+        local mid
+        win:Button(parent, "<", 0.15, nil, function() setIdx((getIdx() - 2) % #list + 1) mid.Text = list[getIdx()] end)
+        mid = win:Button(parent, list[getIdx()], 0.7, Color3.fromRGB(32, 32, 44), function() end)
+        win:Button(parent, ">", 0.15, nil, function() setIdx(getIdx() % #list + 1) mid.Text = list[getIdx()] end)
+        return mid
+    end
+
+    local dragging, ds, sp
+    f.InputBegan:Connect(function(i)
+        if (i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch) and i.Position.Y - f.AbsolutePosition.Y < 30 then
+            dragging, ds, sp = true, i.Position, f.Position
+            i.Changed:Connect(function() if i.UserInputState == Enum.UserInputState.End then dragging = false end end)
+        end
+    end)
+    UIS.InputChanged:Connect(function(i)
+        if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+            local d = i.Position - ds
+            f.Position = UDim2.new(sp.X.Scale, sp.X.Offset + d.X, sp.Y.Scale, sp.Y.Offset + d.Y)
+        end
+    end)
+    return win
+end
+
+return Lib
