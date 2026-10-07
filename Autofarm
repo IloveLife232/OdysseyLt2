@@ -141,6 +141,100 @@ function Lib.new(title, opts)
         win:Button(parent, ">", 0.15, nil, function() setIdx(getIdx() % #list + 1) mid.Text = list[getIdx()] end)
         return mid
     end
+    function win:Dropdown(list, default, fn, placeholder)
+        local dd = {List = list or {}, Value = default, Open = false}
+        local box = Instance.new("Frame")
+        box.Size = UDim2.new(1, -6, 0, 28)
+        box.BackgroundTransparency = 1
+        box.AutomaticSize = Enum.AutomaticSize.Y
+        box.LayoutOrder = nextOrder()
+        box.Parent = sc
+        local bl = Instance.new("UIListLayout", box)
+        bl.Padding = UDim.new(0, 3)
+        bl.SortOrder = Enum.SortOrder.LayoutOrder
+        local head = Instance.new("TextButton")
+        head.Size = UDim2.new(1, 0, 0, 28)
+        head.BackgroundColor3 = Color3.fromRGB(32, 32, 44)
+        head.TextColor3 = Color3.new(1, 1, 1)
+        head.Font = Enum.Font.GothamBold
+        head.TextSize = 12
+        head.TextTruncate = Enum.TextTruncate.AtEnd
+        head.LayoutOrder = 1
+        head.Parent = box
+        Instance.new("UICorner", head).CornerRadius = UDim.new(0, 6)
+        local hs = Instance.new("UIStroke", head)
+        hs.Color = accent
+        hs.Transparency = 0.6
+        local items = Instance.new("Frame")
+        items.Size = UDim2.new(1, 0, 0, 0)
+        items.AutomaticSize = Enum.AutomaticSize.Y
+        items.BackgroundTransparency = 1
+        items.Visible = false
+        items.LayoutOrder = 2
+        items.Parent = box
+        local il = Instance.new("UIListLayout", items)
+        il.Padding = UDim.new(0, 2)
+        il.SortOrder = Enum.SortOrder.LayoutOrder
+        local function label()
+            local t = dd.Value ~= nil and tostring(dd.Value) or (placeholder or "Select...")
+            head.Text = t .. (dd.Open and "  \u{25B2}" or "  \u{25BC}")
+        end
+        local function rebuild()
+            for _, c in ipairs(items:GetChildren()) do
+                if c:IsA("TextButton") or c:IsA("TextLabel") then c:Destroy() end
+            end
+            if #dd.List == 0 then
+                local e = Instance.new("TextLabel")
+                e.Size = UDim2.new(1, 0, 0, 22)
+                e.BackgroundTransparency = 1
+                e.Text = "Nothing here yet"
+                e.TextColor3 = Color3.fromRGB(140, 140, 150)
+                e.Font = Enum.Font.Gotham
+                e.TextSize = 12
+                e.Parent = items
+            end
+            for i, v in ipairs(dd.List) do
+                local b = Instance.new("TextButton")
+                b.Size = UDim2.new(1, 0, 0, 24)
+                b.BackgroundColor3 = (v == dd.Value) and Color3.fromRGB(60, 70, 120) or Color3.fromRGB(38, 38, 52)
+                b.Text = tostring(v)
+                b.TextColor3 = Color3.new(1, 1, 1)
+                b.Font = Enum.Font.Gotham
+                b.TextSize = 12
+                b.TextTruncate = Enum.TextTruncate.AtEnd
+                b.LayoutOrder = i
+                b.Parent = items
+                Instance.new("UICorner", b).CornerRadius = UDim.new(0, 5)
+                b.Activated:Connect(function()
+                    dd.Value = v
+                    dd.Open = false
+                    items.Visible = false
+                    rebuild()
+                    label()
+                    if fn then task.spawn(fn, v, i) end
+                end)
+            end
+        end
+        head.Activated:Connect(function()
+            dd.Open = not dd.Open
+            items.Visible = dd.Open
+            label()
+        end)
+        function dd:Set(v)
+            dd.Value = v
+            rebuild()
+            label()
+        end
+        function dd:SetList(newList)
+            dd.List = newList or {}
+            rebuild()
+            label()
+        end
+        dd.Frame = box
+        rebuild()
+        label()
+        return dd
+    end
 
     local dragging, ds, sp
     f.InputBegan:Connect(function(i)
