@@ -1963,6 +1963,7 @@ function Odyssey:CreateWindow(opts)
 	opts=opts or {}
 	local name=opts.Name or "Odyssey"
 	local sub=opts.Subtitle or ""
+	sub=(sub~="" and (sub.." · ") or "").."v3.1.4"
 	local tier=opts.Tier
 	local gameName="Lumber Tycoon 2"
 	for _,v in ipairs(PlayerGui:GetChildren()) do
@@ -2564,7 +2565,7 @@ function Odyssey:CreateWindow(opts)
 	makeConfigBtn("Delete config","Permanently delete saved config",function() pcall(function() if isfile(CONFIG_PATH) then delfile(CONFIG_PATH) end end); win:Notify({Title="Config",Content="Config deleted",Duration=3}) end)
 
 	settingsTab:CreateSection("CREDITS")
-	settingsTab:CreateParagraph({Title="Odyssey UI",Text="Script by: IHateSchool & Vaxeal\nUI Library: Odyssey Lib v3\nTesters: Nazab, Pete <3, Skat3OrDi3, Jwiehan & Tiny Turtle\nOdyssey Helpers: Silent, Cazed & Vaxeal"})
+	settingsTab:CreateParagraph({Title="Odyssey UI",Text="Script by: IHateSchool & Vaxeal\nUI Library: Odyssey Lib v3\nTesters: Nazab, Pete <3, Skat3OrDi3, Jwiehan & Tiny Turtle\nOdyssey Helpers: Silent ben8x, MrDizzler, Cazed & Vaxeal"})
 
 	function win:Notify(nopts2) Window.Notify(self,nopts2) end
 	function win:SetKeybind(key) toggleKey=key end
