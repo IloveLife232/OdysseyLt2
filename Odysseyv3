@@ -1,6 +1,8 @@
 local Odyssey = {}
 Odyssey.__index = Odyssey
 Odyssey.Flags = {}
+Odyssey._Restore = {}
+Odyssey._Loaded = nil
 Odyssey.Version = "3.0"
 
 local Players=game:GetService("Players")
@@ -751,7 +753,16 @@ function Tab:CreateToggle(opts)
 	end
 	function api:GetValue() return enabled end
 	function api:Destroy() card:Destroy() end
-	if flag then Odyssey.Flags[flag]=enabled end
+	if flag then
+		Odyssey.Flags[flag]=enabled
+		Odyssey._Restore[flag]=function(v)
+			if type(v)~="boolean" or v==enabled then return end
+			enabled=v
+			render(false)
+			Odyssey.Flags[flag]=v
+			if cb then task.spawn(cb,v) end
+		end
+	end
 
 	if enabled and cb then cb(enabled) end
 	return api
@@ -1160,6 +1171,9 @@ function Tab:CreateBind(opts)
 	local current=opts.CurrentKeybind or opts.CurrentBind or "None"
 	local hold=opts.HoldToInteract or false
 	local cb=opts.Callback
+	local flag=opts.Flag or ("Keybind_"..tostring(opts.Name or "Keybind"))
+	if Odyssey._Loaded and type(Odyssey._Loaded[flag])=="string" then current=Odyssey._Loaded[flag] end
+	Odyssey.Flags[flag]=current
 	local card=_slot(self,true)
 	local left=_title(card,opts.Name or "Keybind",opts.Description)
 	left.Size=UDim2.new(1,-96,0,0)
@@ -1173,6 +1187,7 @@ function Tab:CreateBind(opts)
 			if i.UserInputType~=Enum.UserInputType.Keyboard then return end
 			current=i.KeyCode.Name
 			keyBtn.Text=current
+			Odyssey.Flags[flag]=current
 			awaiting=false
 		elseif not gp and i.KeyCode.Name==current then
 			if hold then
@@ -1191,7 +1206,13 @@ function Tab:CreateBind(opts)
 	end)
 	reg(self,opts.Name,card)
 	local api={}
-	function api:Set(o) if o.KeyCode then current=o.KeyCode.Name; keyBtn.Text=current end end
+	function api:Set(o) if o.KeyCode then current=o.KeyCode.Name; keyBtn.Text=current; Odyssey.Flags[flag]=current end end
+	Odyssey._Restore[flag]=function(v)
+		if type(v)~="string" then return end
+		current=v
+		keyBtn.Text=v
+		Odyssey.Flags[flag]=v
+	end
 	function api:GetValue() return current end
 	function api:Destroy() card:Destroy() end
 	return api
@@ -1829,13 +1850,50 @@ function Window:CreateProgressWidget(opts)
 	local fill=New("Frame",{Size=UDim2.new(pctOf(),0,1,0),BackgroundColor3=C.White,BorderSizePixel=0,Parent=track})
 	Corner(fill,4)
 	local grad=AccentGrad(fill,0)
+	local etaLbl=New("TextLabel",{Text="Estimating time...",TextSize=12,TextColor3=C.Muted,Font=Enum.Font.BuilderSansMedium,BackgroundTransparency=1,Size=UDim2.new(1,0,0,14),TextXAlignment=Enum.TextXAlignment.Left,Parent=vl})
+	local startT,startV=os.clock(),val
+	local eta,etaAt=nil,os.clock()
+	local function fmt(sec)
+		sec=math.max(0,math.floor(sec+0.5))
+		if sec>=3600 then return string.format("%dh %dm",sec//3600,(sec%3600)//60) end
+		if sec>=60 then return string.format("%dm %ds",sec//60,sec%60) end
+		return sec.."s"
+	end
+	local function calcEta()
+		if val>=maxV then eta=0 etaAt=os.clock() return end
+		local done,el=val-startV,os.clock()-startT
+		if done>0 and el>=2 then
+			eta=(maxV-val)/(done/el)
+			etaAt=os.clock()
+		end
+	end
+	local function drawEta()
+		if val>=maxV then
+			etaLbl.Text="Done"
+		elseif eta then
+			etaLbl.Text="About "..fmt(eta-(os.clock()-etaAt)).." left"
+		else
+			etaLbl.Text="Estimating time..."
+		end
+	end
+	task.spawn(function()
+		while pg.Parent do
+			drawEta()
+			task.wait(1)
+		end
+	end)
 	local api={}
 	function api:Set(o)
 		if o.Name~=nil then nameLbl.Text=o.Name end
 		if o.Range~=nil then minV=o.Range[1]; maxV=o.Range[2] end
-		if o.Value~=nil then
-			val=math.clamp(o.Value,minV,maxV)
+		local nv=o.Value
+		if nv==nil then nv=o.CurrentValue end
+		if nv~=nil then
+			val=math.clamp(nv,minV,maxV)
+			if val<startV then startT,startV,eta=os.clock(),val,nil end
 			TweenService:Create(fill,TweenInfo.new(0.2),{Size=UDim2.new(pctOf(),0,1,0)}):Play()
+			calcEta()
+			drawEta()
 		end
 		valLbl.Text=pctText()
 	end
@@ -2273,6 +2331,7 @@ function Odyssey:CreateWindow(opts)
 	UserInputService.InputBegan:Connect(function(i,gp)
 		if awaiting2 and not gp then
 			toggleKey=i.KeyCode
+			Odyssey.Flags["OdysseyToggleKey"]=i.KeyCode.Name
 			kbBox2.Text=i.KeyCode.Name
 			FooterKey.Text="Toggle UI: "..i.KeyCode.Name.."   ·   Lib v"..Odyssey.Version
 			awaiting2=false
@@ -2525,6 +2584,7 @@ function Odyssey:CreateWindow(opts)
 			if isfile(CONFIG_PATH) then
 				local data=game:GetService("HttpService"):JSONDecode(readfile(CONFIG_PATH))
 				for k,v in pairs(data) do Odyssey.Flags[k]=v end
+				Odyssey._Loaded=data
 			end
 		end)
 	end
@@ -2540,6 +2600,19 @@ function Odyssey:CreateWindow(opts)
 			if savedLayout=="Sidebar" or savedLayout=="Compact" then
 				ApplyLayout(savedLayout)
 				pcall(function() layoutDD:Set({CurrentOption=savedLayout}) end)
+			end
+			local loaded=Odyssey._Loaded or {}
+			for k,v in pairs(loaded) do
+				if (k:sub(1,8)=="Keybind_" or k=="OdysseyBlurIdentity") and Odyssey._Restore[k] then pcall(Odyssey._Restore[k],v) end
+			end
+			local savedKey=loaded["OdysseyToggleKey"]
+			if type(savedKey)=="string" then
+				local okKey,kc=pcall(function() return Enum.KeyCode[savedKey] end)
+				if okKey and kc then
+					toggleKey=kc
+					kbBox2.Text=kc.Name
+					pcall(function() FooterKey.Text="Toggle UI: "..kc.Name.."   ·   Lib v"..Odyssey.Version end)
+				end
 			end
 			local savedSize=Odyssey.Flags["OdysseyUISize"]
 			if savedSize and UIScalePresets[savedSize] then
@@ -2564,6 +2637,7 @@ function Odyssey:CreateWindow(opts)
 	makeConfigBtn("Save config","Save all settings to file",function() saveConfig(); win:Notify({Title="Config",Content="Config saved!",Duration=3}) end)
 	makeConfigBtn("Delete config","Permanently delete saved config",function() pcall(function() if isfile(CONFIG_PATH) then delfile(CONFIG_PATH) end end); win:Notify({Title="Config",Content="Config deleted",Duration=3}) end)
 
+	if type(opts.SettingsExtra)=="function" then pcall(opts.SettingsExtra,settingsTab) end
 	settingsTab:CreateSection("CREDITS")
 	settingsTab:CreateParagraph({Title="Odyssey UI",Text="Script by: IHateSchool & Vaxeal\nUI Library: Odyssey Lib v3\nTesters: Nazab, Pete <3, Skat3OrDi3, Jwiehan & Tiny Turtle\nOdyssey Helpers: Silent ben8x, MrDizzler, Cazed & Vaxeal"})
 
