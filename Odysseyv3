@@ -10,8 +10,18 @@ local TweenService=game:GetService("TweenService")
 local UserInputService=game:GetService("UserInputService")
 local RunService=game:GetService("RunService")
 local MarketplaceService=game:GetService("MarketplaceService")
-local LocalPlayer=Players.LocalPlayer
-local PlayerGui=LocalPlayer:WaitForChild("PlayerGui")
+-- some executors/auto-execute run this before the player exists (LocalPlayer = nil -> "attempt to index nil with 'WaitForChild'")
+local LocalPlayer=Players.LocalPlayer or (getgenv and getgenv().OdysseyLocalPlayer)
+if not LocalPlayer then
+	if not game:IsLoaded() then pcall(function() game.Loaded:Wait() end) end
+	local t0=os.clock()
+	repeat
+		task.wait()
+		LocalPlayer=Players.LocalPlayer or (getgenv and getgenv().OdysseyLocalPlayer)
+	until LocalPlayer or os.clock()-t0>30
+end
+if not LocalPlayer then error("Odyssey UI: couldn't find your player (LocalPlayer is nil on this executor)",0) end
+local PlayerGui=LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui")
 
 local MaterialIcons = {
 	["home"]="http://www.roblox.com/asset/?id=6026568195";
@@ -328,7 +338,7 @@ local function ApplyLT2Theme(themeColor)
 	task.spawn(function()
 		repeat
 			lt2Again=false
-			for _,v in ipairs(Players.LocalPlayer.PlayerGui:GetChildren()) do
+			for _,v in ipairs(PlayerGui:GetChildren()) do
 				if not lt2ThemeEnabled then break end
 				StyleLT2Gui(v,currentLT2BG)
 			end
@@ -353,7 +363,7 @@ local function RevertLT2Theme()
 	OriginalColors={}
 end
 
-Players.LocalPlayer.PlayerGui.ChildAdded:Connect(function(v)
+PlayerGui.ChildAdded:Connect(function(v)
 	if SKIP_GUIS[v.Name] then return end
 	task.wait(0.1)
 	if lt2ThemeEnabled and v.Parent then StyleLT2Gui(v,currentLT2BG) end
@@ -2339,7 +2349,7 @@ function Odyssey:CreateWindow(opts)
 	end)
 	local antiAFKEnabled=true
 	local VU2=game:GetService("VirtualUser")
-	Players.LocalPlayer.Idled:Connect(function() if antiAFKEnabled then VU2:CaptureController(); VU2:ClickButton2(Vector2.new()) end end)
+	LocalPlayer.Idled:Connect(function() if antiAFKEnabled then VU2:CaptureController(); VU2:ClickButton2(Vector2.new()) end end)
 	settingsTab:CreateToggle({
 		Name="Anti AFK",
 		Description="Prevents idle kick",
@@ -2363,7 +2373,7 @@ function Odyssey:CreateWindow(opts)
 		Description="Rejoins the exact same server you're currently in",
 		Callback=function()
 			local TS=game:GetService("TeleportService")
-			local lp=Players.LocalPlayer
+			local lp=LocalPlayer
 			win:Notify({Title="Odyssey", Content="Rejoining...", Duration=3})
 
 			local failConn
@@ -2403,7 +2413,7 @@ function Odyssey:CreateWindow(opts)
 			local currentJobId = game.JobId
 			for _, server in ipairs(result.data) do
 				if server.id ~= currentJobId and server.playing < server.maxPlayers then
-					game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, server.id, Players.LocalPlayer)
+					game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, server.id, LocalPlayer)
 					return
 				end
 			end
