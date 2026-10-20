@@ -5,6 +5,9 @@ Odyssey._Restore = {}
 Odyssey._Loaded = nil
 Odyssey.Version = "3.0"
 
+-- Odyssey Base Shop panel on the Home page: paste the Discord invite between the quotes (e.g. "https://discord.gg/xxxx")
+local BASE_SHOP_INVITE = "https://discord.gg/VgGpZUc2hW"
+
 local Players=game:GetService("Players")
 local TweenService=game:GetService("TweenService")
 local UserInputService=game:GetService("UserInputService")
@@ -208,8 +211,9 @@ local Themes={
 }
 
 local lt2ThemeEnabled=true
-local currentLT2BG=Color3.fromRGB(70,90,130)
-local currentThemeColors={c1=Color3.fromRGB(74,108,174),c2=Color3.fromRGB(90,90,140),c3=Color3.fromRGB(50,50,78)}
+-- Crimson is the default theme
+local currentLT2BG=Color3.fromRGB(170,25,90)
+local currentThemeColors={c1=Color3.fromRGB(140,10,30),c2=Color3.fromRGB(200,20,80),c3=Color3.fromRGB(160,30,160)}
 
 local OriginalColors={}
 local ProgressBarGradients={}
@@ -1552,6 +1556,39 @@ function Window:_buildHomeTab(gameName)
 	VList(donateArea,6)
 	self._community={list=comL,card=comCard,discordBtn=discordBtn,discordLbl=discordLbl,donateBtn=donateBtn,donateArea=donateArea}
 
+	do
+		local shopCard,shopL=HCard(list,3,"Odyssey Base Shop","Weekly Giveaways",true)
+		New("TextLabel",{Text="Looking for good, high quality bases? Check out the Odyssey Base Shop - hand-picked builds ready to go. Join the Discord to see what's in stock, plus weekly giveaways!",TextSize=13,TextColor3=C.Dim,Font=Enum.Font.BuilderSansMedium,BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y,TextWrapped=true,TextXAlignment=LEFT,LayoutOrder=1,Parent=shopL})
+		local row=New("Frame",{BackgroundTransparency=1,Size=UDim2.new(1,0,0,34),LayoutOrder=2,Parent=shopL})
+		local function invite()
+			local g=(getgenv and getgenv().OdysseyBaseShopInvite) or BASE_SHOP_INVITE
+			if type(g)~="string" then g="" end
+			return g
+		end
+		local b=New("TextButton",{Text="",BackgroundColor3=C.White,BorderSizePixel=0,Size=UDim2.new(0,0,0,30),Position=UDim2.new(0,0,0,4),AutomaticSize=Enum.AutomaticSize.X,AutoButtonColor=false,Parent=row})
+		Corner(b,9); AccentGrad(b,0)
+		local inner=New("Frame",{BackgroundTransparency=1,Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,Parent=b})
+		Pad(inner,0,14,0,12)
+		local il=HList(inner,6)
+		il.VerticalAlignment=Enum.VerticalAlignment.Center
+		local url=GetMaterialIcon("storefront") or GetMaterialIcon("chat_bubble")
+		if url then New("ImageLabel",{Image=url,ImageColor3=C.White,BackgroundTransparency=1,Size=UDim2.new(0,14,0,14),LayoutOrder=1,Parent=inner}) end
+		local lbl=New("TextLabel",{Text=invite()~="" and "Copy Base Shop Invite" or "Invite coming soon",TextSize=13,TextColor3=C.White,Font=Enum.Font.BuilderSansBold,BackgroundTransparency=1,Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,LayoutOrder=2,Parent=inner})
+		b.MouseEnter:Connect(function() TweenService:Create(b,TweenInfo.new(0.1),{BackgroundTransparency=0.12}):Play() end)
+		b.MouseLeave:Connect(function() TweenService:Create(b,TweenInfo.new(0.1),{BackgroundTransparency=0}):Play() end)
+		local win=self
+		b.MouseButton1Click:Connect(function()
+			local inv=invite()
+			if inv=="" then
+				pcall(function() Window.Notify(win,{Title="Odyssey Base Shop",Content="The invite isn't up yet - check back soon",Duration=3}) end)
+				return
+			end
+			lbl.Text="Copy Base Shop Invite"
+			local ok=pcall(function() setclipboard(inv) end)
+			pcall(function() Window.Notify(win,{Title="Odyssey Base Shop",Content=ok and ("Invite copied: "..inv) or inv,Duration=4}) end)
+		end)
+	end
+
 	local mainRef=self._main
 
 	local LOG_H=130
@@ -2050,7 +2087,7 @@ function Odyssey:CreateWindow(opts)
 	local layout=(UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled) and "Compact" or "Sidebar"
 	local minimized=false
 
-	local Main=New("Frame",{Name="Main",Size=UDim2.fromOffset(SIZES[layout].X,SIZES[layout].Y),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),BackgroundColor3=Color3.fromRGB(90,90,140),BorderSizePixel=0,Parent=Gui})
+	local Main=New("Frame",{Name="Main",Size=UDim2.fromOffset(SIZES[layout].X,SIZES[layout].Y),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),BackgroundColor3=Color3.fromRGB(200,20,80),BorderSizePixel=0,Parent=Gui})
 	Corner(Main,16)
 	local OdysseyUIScale=Instance.new("UIScale")
 	OdysseyUIScale.Scale=0.9
@@ -2058,9 +2095,9 @@ function Odyssey:CreateWindow(opts)
 	OdysseyMainRef=Main
 	OdysseyGradient=Instance.new("UIGradient")
 	OdysseyGradient.Color=ColorSequence.new({
-		ColorSequenceKeypoint.new(0,Color3.fromRGB(74,108,174)),
-		ColorSequenceKeypoint.new(0.5,Color3.fromRGB(90,90,140)),
-		ColorSequenceKeypoint.new(1,Color3.fromRGB(50,50,78)),
+		ColorSequenceKeypoint.new(0,Color3.fromRGB(140,10,30)),
+		ColorSequenceKeypoint.new(0.5,Color3.fromRGB(200,20,80)),
+		ColorSequenceKeypoint.new(1,Color3.fromRGB(160,30,160)),
 	})
 	OdysseyGradient.Rotation=120
 	OdysseyGradient.Parent=Main
@@ -2178,7 +2215,7 @@ function Odyssey:CreateWindow(opts)
 	local Footer=New("Frame",{Name="Footer",Size=UDim2.new(1,0,0,FOOT),Position=UDim2.new(0,0,1,-FOOT),BackgroundTransparency=1,Parent=Content})
 	New("Frame",{Size=UDim2.new(1,0,0,1),BackgroundColor3=C.CardStroke,BorderSizePixel=0,Parent=Footer})
 	local FooterKey=New("TextLabel",{Text="Toggle UI: RightShift   ·   Lib v"..Odyssey.Version,TextSize=12,TextColor3=C.Muted,Font=Enum.Font.BuilderSansMedium,BackgroundTransparency=1,Size=UDim2.new(0.5,-16,1,0),Position=UDim2.new(0,16,0,0),TextXAlignment=Enum.TextXAlignment.Left,Parent=Footer})
-	local FooterTheme=New("TextLabel",{Text="Theme: Slate",TextSize=12,TextColor3=C.Muted,Font=Enum.Font.BuilderSansMedium,BackgroundTransparency=1,Size=UDim2.new(0.5,-16,1,0),Position=UDim2.new(0.5,0,0,0),TextXAlignment=Enum.TextXAlignment.Right,Parent=Footer})
+	local FooterTheme=New("TextLabel",{Text="Theme: Crimson",TextSize=12,TextColor3=C.Muted,Font=Enum.Font.BuilderSansMedium,BackgroundTransparency=1,Size=UDim2.new(0.5,-16,1,0),Position=UDim2.new(0.5,0,0,0),TextXAlignment=Enum.TextXAlignment.Right,Parent=Footer})
 	local ContentScroll=New("ScrollingFrame",{Size=UDim2.new(1,0,1,-HEAD),Position=UDim2.new(0,0,0,HEAD),BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=3,ScrollBarImageColor3=C.Muted,ScrollingDirection=Enum.ScrollingDirection.Y,CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.Y,ElasticBehavior=Enum.ElasticBehavior.Never,Parent=Content})
 	Pad(ContentScroll,12,16,16,16); VList(ContentScroll,10)
 
@@ -2310,16 +2347,26 @@ function Odyssey:CreateWindow(opts)
 		Callback=function(v)
 			OdysseyUIScale.Scale=UIScalePresets[v] or 0.9
 			Odyssey.Flags["OdysseyUISize"]=v
+			if win and win._autoSave then win._autoSave() end
 		end,
 	})
+	-- shown as Grid / List; the layout itself is still called Sidebar / Compact inside (old configs keep working)
+	local LAYOUT_SHOW={Sidebar="Grid",Compact="List"}
+	local LAYOUT_KEY={Grid="Sidebar",List="Compact",Sidebar="Sidebar",Compact="Compact"}
 	local layoutDD=settingsTab:CreateDropdown({
 		Name="Layout",
-		Options={"Sidebar","Compact"},
-		CurrentOption=layout,
+		Options={"Grid","List"},
+		CurrentOption=LAYOUT_SHOW[layout] or "Grid",
 		MultipleOptions=false,
-		Description="Compact is a smaller window with everything in one column - better for phones",
+		Description="Grid = side menu with a wide window. List = smaller window with everything in one column - better for phones",
 		Flag="OdysseyLayout",
-		Callback=function(v) ApplyLayout(v) Odyssey.Flags["OdysseyLayout"]=v end,
+		Callback=function(v)
+			if type(v)=="table" then v=v[1] end
+			local key=LAYOUT_KEY[v] or "Sidebar"
+			ApplyLayout(key)
+			Odyssey.Flags["OdysseyLayout"]=key
+			if win and win._autoSave then win._autoSave() end
+		end,
 	})
 	settingsTab:CreateButton({
 		Name="Destroy UI",
@@ -2345,6 +2392,7 @@ function Odyssey:CreateWindow(opts)
 			kbBox2.Text=i.KeyCode.Name
 			FooterKey.Text="Toggle UI: "..i.KeyCode.Name.."   ·   Lib v"..Odyssey.Version
 			awaiting2=false
+			if win and win._autoSave then win._autoSave() end
 		end
 	end)
 	local antiAFKEnabled=true
@@ -2505,11 +2553,12 @@ function Odyssey:CreateWindow(opts)
 	local themeDD=settingsTab:CreateDropdown({
 		Name="UI Theme",
 		Options=themeNames,
-		CurrentOption="Slate",
+		CurrentOption="Crimson",
 		Tooltip="Change the gradient theme",
 		Callback=function(v)
 			ApplyThemeDirect(v)
 			Odyssey.Flags["OdysseyTheme"]=v
+			if win and win._autoSave then win._autoSave() end
 		end,
 	})
 
@@ -2605,11 +2654,13 @@ function Odyssey:CreateWindow(opts)
 			if savedTheme and Themes[savedTheme] then
 				ApplyThemeDirect(savedTheme)
 				themeDD:Set({CurrentOption=savedTheme})
+			else
+				ApplyThemeDirect("Crimson")
 			end
-			local savedLayout=Odyssey.Flags["OdysseyLayout"]
-			if savedLayout=="Sidebar" or savedLayout=="Compact" then
+			local savedLayout=LAYOUT_KEY[Odyssey.Flags["OdysseyLayout"] or ""]
+			if savedLayout then
 				ApplyLayout(savedLayout)
-				pcall(function() layoutDD:Set({CurrentOption=savedLayout}) end)
+				pcall(function() layoutDD:Set({CurrentOption=LAYOUT_SHOW[savedLayout]}) end)
 			end
 			local loaded=Odyssey._Loaded or {}
 			for k,v in pairs(loaded) do
@@ -2629,7 +2680,28 @@ function Odyssey:CreateWindow(opts)
 				OdysseyUIScale.Scale=UIScalePresets[savedSize]
 				pcall(function() uiSizeDD:Set({CurrentOption=savedSize}) end)
 			end
+			win._cfgReady=true
 		end)
+	else
+		task.defer(function() ApplyThemeDirect("Crimson") win._cfgReady=true end)
+	end
+	-- theme, layout, UI size and the toggle keybind save by themselves when changed (no need to press Save config)
+	win._autoSave=function()
+		if not win._cfgReady then return end
+		local ok=pcall(function()
+			ensureFolders()
+			local data={}
+			if isfile(CONFIG_PATH) then
+				local okR,old=pcall(function() return game:GetService("HttpService"):JSONDecode(readfile(CONFIG_PATH)) end)
+				if okR and type(old)=="table" then data=old end
+			end
+			for _,k in ipairs({"OdysseyTheme","OdysseyLayout","OdysseyUISize","OdysseyToggleKey"}) do
+				local v=Odyssey.Flags[k]
+				if v~=nil then data[k]=v end
+			end
+			writefile(CONFIG_PATH,game:GetService("HttpService"):JSONEncode(data))
+		end)
+		return ok
 	end
 
 	local cfgBtnRow=New("Frame",{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y,LayoutOrder=settingsTab._order,Parent=settingsTab._list})
