@@ -2105,23 +2105,56 @@ function Odyssey:CreateWindow(opts)
 	local Shade=New("Frame",{Name="Shade",Size=UDim2.new(1,0,1,0),BackgroundColor3=C.BG,BackgroundTransparency=0.12,BorderSizePixel=0,Parent=Main})
 	Corner(Shade,16); Stroke(Shade,C.CardStroke,1,0)
 
+	-- Odyssey Hub logo (Ring Guard): a PNG from GitHub, shown through the executor (no Roblox upload) and tinted to the theme.
+	-- If the executor can't show local images, it falls back to the drawn planet icon below.
+	local LOGO_URL="https://raw.githubusercontent.com/IloveLife232/OdyssseyHub/refs/heads/main/OdysseyLogo.png"
+	local LOGO_FILE="Odyssey Hub/OdysseyLogo.png"
+	local logoAsset
+	local function getLogoAsset()
+		if logoAsset~=nil then return logoAsset or nil end
+		logoAsset=false
+		local gca=getcustomasset or getsynasset
+		if type(gca)~="function" or type(writefile)~="function" or type(isfile)~="function" then return nil end
+		pcall(function()
+			if not isfile(LOGO_FILE) then
+				local data=game:HttpGet(LOGO_URL)
+				if type(data)=="string" and data:sub(2,4)=="PNG" then
+					if makefolder and isfolder and not isfolder("Odyssey Hub") then makefolder("Odyssey Hub") end
+					writefile(LOGO_FILE,data)
+				end
+			end
+			if isfile(LOGO_FILE) then logoAsset=gca(LOGO_FILE) end
+		end)
+		return logoAsset or nil
+	end
+	-- Odyssey Hub icon: theme-colored round badge with a ringed planet (all drawn in code, no image upload)
 	local function TreeIcon(parent,size,z)
 		z=z or 1
-		local ok,holder=pcall(function() return New("CanvasGroup",{Size=UDim2.new(0,size,0,size),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),BackgroundTransparency=1,ZIndex=z,Parent=parent}) end)
-		if not ok or not holder then holder=New("Frame",{Size=UDim2.new(0,size,0,size),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),BackgroundTransparency=1,ZIndex=z,Parent=parent}) end
-		local parts={
-			{Color3.fromRGB(110,68,40),0.14,0.5,0.5,0.72,0,0.1},
-			{Color3.fromRGB(110,68,40),0.1,0.34,0.34,0.44,-38,0.1},
-			{Color3.fromRGB(110,68,40),0.1,0.34,0.66,0.44,38,0.1},
-			{Color3.fromRGB(46,125,50),0.34,0.3,0.24,0.3,0,0.12},
-			{Color3.fromRGB(46,125,50),0.34,0.3,0.76,0.3,0,0.12},
-			{Color3.fromRGB(88,178,72),0.38,0.32,0.5,0.2,0,0.12},
-			{Color3.fromRGB(120,200,95),0.14,0.08,0.44,0.1,0,0.3},
-		}
-		for i,pt in ipairs(parts) do
-			local b=New("Frame",{Size=UDim2.new(pt[2],0,pt[3],0),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(pt[4],0,pt[5],0),Rotation=pt[6],BackgroundColor3=pt[1],BorderSizePixel=0,ZIndex=z+i,Parent=holder})
-			Corner(b,math.max(1,math.floor(math.min(pt[2],pt[3])*size*pt[7])))
+		local asset=getLogoAsset()
+		if asset then
+			local img=New("ImageLabel",{Image=asset,ScaleType=Enum.ScaleType.Fit,Size=UDim2.new(0,size,0,size),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),BackgroundTransparency=1,ZIndex=z,Parent=parent})
+			-- one color: the theme's main color, a touch brighter so it pops on the dark sidebar
+			local function col() return currentThemeColors.c2:Lerp(Color3.new(1,1,1),0.25) end
+			img.ImageColor3=col()
+			task.spawn(function() while img.Parent do pcall(function() img.ImageColor3=col() end) task.wait(0.5) end end)
+			return img
 		end
+		local holder=New("Frame",{Size=UDim2.new(0,size,0,size),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),BackgroundTransparency=1,ZIndex=z,Parent=parent})
+		local badge=New("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0,ZIndex=z+1,Parent=holder})
+		Corner(badge,999)
+		AccentGrad(badge,135)
+		-- the planet's ring, tilted, sitting behind the planet so it shows on both sides
+		local band=New("Frame",{Size=UDim2.new(0.9,0,0.1,0),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.52,0),Rotation=-22,BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0,ZIndex=z+2,Parent=holder})
+		Corner(band,999)
+		-- the planet: a white disc with a theme-colored rim so the ring looks like it goes around it
+		local planet=New("Frame",{Size=UDim2.new(0.42,0,0.42,0),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0,ZIndex=z+3,Parent=holder})
+		Corner(planet,999)
+		local rim=Instance.new("UIStroke")
+		rim.Color=Color3.new(1,1,1)
+		rim.Thickness=math.max(1,math.floor(size*0.06+0.5))
+		rim.ApplyStrokeMode=Enum.ApplyStrokeMode.Border
+		rim.Parent=planet
+		AccentGrad(rim,135)
 		return holder
 	end
 	local function Logo(parent,size,pos)
@@ -2580,13 +2613,23 @@ function Odyssey:CreateWindow(opts)
 		end,
 	})
 
+	-- every game saves under Odyssey Hub/<game> (same layout as the Odyssey Hub UI); themes are shared in Odyssey Hub/Themes
+	local ROOT_FOLDER="Odyssey Hub"
+	local gf=opts.Folder
+	if not gf then
+		if game.PlaceId==13822889 then gf="Lumber Tycoon 2"
+		else gf=opts.Subtitle or opts.Game; if not gf then pcall(function() gf=MarketplaceService:GetProductInfo(game.PlaceId).Name end) end end
+	end
+	gf=tostring(gf or "Game"):gsub("^Odyssey Hub[/\\]",""):gsub('[/\\:%*%?"<>|]',""):gsub("^%s+",""):gsub("%s+$","")
+	if gf=="" then gf="Game" end
+	local GAME_FOLDER=ROOT_FOLDER.."/"..gf
 	settingsTab:CreateSection("CONFIG")
 	local pathRow=New("Frame",{BackgroundTransparency=1,Size=UDim2.new(1,0,0,24),LayoutOrder=settingsTab._order,Parent=settingsTab._list})
 	settingsTab._order=settingsTab._order+1
 	local pathBox=New("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=C.Field,BackgroundTransparency=0,BorderSizePixel=0,Parent=pathRow})
 	Corner(pathBox,7); GlassStroke(pathBox,0.65); Pad(pathBox,0,8,0,8)
-	New("TextLabel",{Text="Odyssey/",TextSize=12,TextColor3=T.Blue,Font=Enum.Font.Code,BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),TextXAlignment=Enum.TextXAlignment.Left,Parent=pathBox})
-	AddTooltip(pathBox,"Root folder for all Odyssey data",true,pathBox)
+	New("TextLabel",{Text=GAME_FOLDER.."/",TextSize=12,TextColor3=T.Blue,Font=Enum.Font.Code,BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),TextXAlignment=Enum.TextXAlignment.Left,Parent=pathBox})
+	AddTooltip(pathBox,"Where this game's Odyssey data is saved",true,pathBox)
 	settingsTab:CreateToggle({
 		Name="Load config on join",
 		CurrentValue=true,
@@ -2595,10 +2638,28 @@ function Odyssey:CreateWindow(opts)
 		Callback=function(v) _G.OdysseyAutoLoad=v end,
 	})
 
-	local CONFIG_PATH="Odyssey/OdysseyConfigs/config.json"
-	local THEMES_FOLDER="Odyssey/OdysseyConfigs/Themes"
-	local FOLDERS={"Odyssey","Odyssey/OdysseyBuilds","Odyssey/OdysseyConfigs",THEMES_FOLDER,"Odyssey/OdysseySlotNames","Odyssey/Pre-Builts","Odyssey/Pre-Builts/WireArt","Odyssey/Pre-Builts/Creation","Odyssey/Pre-Builts/Bark Bases"}
+	local CONFIG_PATH=GAME_FOLDER.."/Config.json"
+	local THEMES_FOLDER=ROOT_FOLDER.."/Themes"
+	local FOLDERS={ROOT_FOLDER,GAME_FOLDER,THEMES_FOLDER}
+	if gf=="Lumber Tycoon 2" then
+		for _,sub in ipairs({"OdysseyBuilds","OdysseyConfigs","OdysseySlotNames","Pre-Builts","Pre-Builts/WireArt","Pre-Builts/Creation","Pre-Builts/Bark Bases"}) do table.insert(FOLDERS,GAME_FOLDER.."/"..sub) end
+	end
 	local function ensureFolders() pcall(function() for _,f in ipairs(FOLDERS) do if not isfolder(f) then makefolder(f) end end end) end
+	-- first run on the new folders: bring the old config and your own themes over (old files stay where they were)
+	pcall(function()
+		ensureFolders()
+		if gf=="Lumber Tycoon 2" and not isfile(CONFIG_PATH) then
+			for _,old in ipairs({GAME_FOLDER.."/OdysseyConfigs/config.json","Odyssey/OdysseyConfigs/config.json"}) do
+				if isfile(old) then writefile(CONFIG_PATH,readfile(old)) break end
+			end
+		end
+		if isfolder("Odyssey/OdysseyConfigs/Themes") then
+			for _,p in ipairs(listfiles("Odyssey/OdysseyConfigs/Themes")) do
+				local n=p:gsub("\\","/"):match("([^/]+%.json)$")
+				if n and not isfile(THEMES_FOLDER.."/"..n) then writefile(THEMES_FOLDER.."/"..n,readfile(p)) end
+			end
+		end
+	end)
 
 	task.defer(function()
 		ensureFolders()
